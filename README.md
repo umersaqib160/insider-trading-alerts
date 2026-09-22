@@ -31,12 +31,12 @@ as a starting point rather than parsing PDFs from scratch.
 ## Proposed architecture
 
 ```
-                 ┌────────────────┐
-                 │   Schedulers    │  (cron / APScheduler)
-                 └───────┬────────┘
-                         │
-        ┌────────────────┼────────────────┐
-        ▼                ▼                ▼
+                 ┌────────────────────┐
+                 │  Daily batch job     │  (cron / APScheduler, once/day)
+                 └─────────┬──────────┘
+                           │
+        ┌──────────────────┼──────────────────┐
+        ▼                  ▼                  ▼
  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐
  │ SEC Form 4   │  │ House PTR    │  │ Senate PTR   │   Ingestion
  │ poller       │  │ scraper      │  │ scraper      │   (per-source)
@@ -48,7 +48,7 @@ as a starting point rather than parsing PDFs from scratch.
                  └─────────┬──────────┘
                            ▼
                  ┌───────────────────┐
-                 │  Postgres storage   │  trades, entities, rules, subscribers
+                 │  Postgres storage   │  trades, entities, rules, users/subscriptions
                  └─────────┬──────────┘
                            ▼
                  ┌───────────────────┐
@@ -56,13 +56,20 @@ as a starting point rather than parsing PDFs from scratch.
                  └─────────┬──────────┘
                            ▼
                  ┌───────────────────┐
-                 │  Notification layer │  email / Slack / Discord / webhook
+                 │  Telegram bot        │  primary notification channel
+                 │  (email/webhook later)│
                  └───────────────────┘
                            │
                  ┌───────────────────┐
                  │  API + dashboard    │  browse trades, manage alert rules
                  └───────────────────┘
 ```
+
+The pipeline runs once a day: pull the day's new filings from all three
+sources, normalize, evaluate signal rules, and push any resulting alerts out
+over Telegram. No streaming/real-time polling for v1 — SEC Form 4 has up to a
+2-day disclosure lag and PTRs up to 45 days anyway, so daily batch loses
+essentially no signal freshness while being far simpler to build and run.
 
 ### Common `Trade` schema (draft)
 
@@ -75,6 +82,23 @@ trade_date, filing_date, filing_lag_days
 source (sec_form4 | house_ptr | senate_ptr), source_url
 ```
 
+### Users & subscriptions (draft)
+
+Data model is multi-user from day one — even though only one person (the
+project owner) will actually use it for now:
+
+```
+user: id, email, created_at
+telegram_chat: user_id, chat_id (from Telegram's getUpdates/webhook), linked_at
+alert_rule: user_id, rule_type, params (e.g. min_trade_value, tickers watched, roles watched)
+```
+
+Onboarding a Telegram recipient: user starts a chat with the bot, sends
+`/start`, bot captures the resulting `chat_id` and links it to their account
+(a `/start <token>` deep link is the standard pattern once there's a real
+signup flow — for now, with a single user, the owner's `chat_id` can just be
+linked manually).
+
 ### Initial signal rules (v1, rule-based)
 
 - Trade size in the top percentile for that person/entity
@@ -86,13 +110,15 @@ source (sec_form4 | house_ptr | senate_ptr), source_url
 ## Tech stack (initial choice)
 
 - **Language:** Python
-- **Ingestion/scheduling:** `requests`/`httpx` + `APScheduler` (or Celery beat
-  if we need distributed workers later)
+- **Ingestion/scheduling:** `requests`/`httpx` + a once-daily `APScheduler`/cron
+  job (no need for distributed workers at this scale)
 - **Parsing:** `lxml`/`BeautifulSoup` for HTML/PDF disclosure parsing
 - **Storage:** PostgreSQL
 - **API:** FastAPI
-- **Notifications:** pluggable — start with email (SMTP) and a generic
-  webhook, add Slack/Discord/Telegram as needed
+- **Notifications:** Telegram bot (`python-telegram-bot`), sending one
+  message per alert to each subscribed user's chat. Notification layer stays
+  pluggable so email/Slack/Discord can be added later, but Telegram is the
+  only channel built for v1.
 
 ## Roadmap
 
@@ -104,14 +130,24 @@ source (sec_form4 | house_ptr | senate_ptr), source_url
       (likely the harder parsing problem)
 - [ ] **Phase 3 — Signal engine v1**: rule-based alerts on the unified trade
       table
-- [ ] **Phase 4 — Notifications**: email/webhook delivery, per-user
-      subscription rules
+- [ ] **Phase 4 — Telegram notifications**: bot setup, chat linking,
+      per-user alert delivery on the daily batch
 - [ ] **Phase 5 — API + dashboard**: browse trades, manage alerts
 - [ ] **Phase 6 — Anomaly scoring**: move beyond static rules if warranted
 
+## Decisions
+
+- **Freshness:** daily batch, not real-time polling (see architecture
+  section for rationale).
+- **Users:** multi-user data model from day one (users, Telegram chat links,
+  per-user alert rules), but only the project owner as an actual user for
+  now.
+- **Notifications:** Telegram bot is the v1 delivery channel.
+
 ## Open questions
 
-- Real-time-ish polling vs. daily batch — how fresh do alerts need to be?
-- Multi-user product (accounts, subscriptions) vs. single-user tool for now?
 - Hosting target (self-hosted, cloud VM, serverless) — affects scheduler
-  choice.
+  choice and how the daily job + Telegram bot get deployed.
+- Telegram bot mode: polling (`getUpdates`) vs. webhook — polling is simpler
+  to run for a single daily job with no server; webhook needs a public HTTPS
+  endpoint but is cleaner if we later want `/commands` handled in real time.
