@@ -1,0 +1,1153 @@
+<title>Insider Alerts Prototype</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Hanken+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root {
+  --bg: #F3F5F8;
+  --surface: #FFFFFF;
+  --surface-2: #ECEFF3;
+  --ink: #121720;
+  --ink-2: #3A4352;
+  --muted: #667085;
+  --line: #DDE2E9;
+  --line-strong: #C5CCD6;
+  --star: #C98208;
+  --star-soft: #FBF0DA;
+  --buy: #1B8250;
+  --buy-soft: #E1F2E8;
+  --sell: #BE3636;
+  --sell-soft: #F8E3E2;
+  --rumor: #6D4FC2;
+  --rumor-soft: #ECE6FA;
+  --tg: #2AABEE;
+  --tg-hover: #1E98D9;
+  --primary: #121720;
+  --primary-ink: #FFFFFF;
+  --focus: #2F6FEB;
+  --chat-bg: #DCE5EC;
+  --bubble: #FFFFFF;
+  --scrim: rgba(12, 16, 22, 0.38);
+  --shadow: 0 1px 2px rgba(18, 23, 32, 0.05), 0 12px 32px rgba(18, 23, 32, 0.10);
+  --font-display: "Bricolage Grotesque", "Hanken Grotesk", system-ui, sans-serif;
+  --font-body: "Hanken Grotesk", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #0D1016;
+    --surface: #151A22;
+    --surface-2: #1D232D;
+    --ink: #E8ECF2;
+    --ink-2: #C2C9D4;
+    --muted: #8D96A6;
+    --line: #262D38;
+    --line-strong: #37404D;
+    --star: #F2AA3C;
+    --star-soft: #392A10;
+    --buy: #45C287;
+    --buy-soft: #12301F;
+    --sell: #F06C67;
+    --sell-soft: #3B1818;
+    --rumor: #A98CF2;
+    --rumor-soft: #2A2142;
+    --primary: #E8ECF2;
+    --primary-ink: #0D1016;
+    --focus: #6EA0FF;
+    --chat-bg: #0F1823;
+    --bubble: #1C2633;
+    --scrim: rgba(0, 0, 0, 0.55);
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 32px rgba(0, 0, 0, 0.45);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0D1016;
+  --surface: #151A22;
+  --surface-2: #1D232D;
+  --ink: #E8ECF2;
+  --ink-2: #C2C9D4;
+  --muted: #8D96A6;
+  --line: #262D38;
+  --line-strong: #37404D;
+  --star: #F2AA3C;
+  --star-soft: #392A10;
+  --buy: #45C287;
+  --buy-soft: #12301F;
+  --sell: #F06C67;
+  --sell-soft: #3B1818;
+  --rumor: #A98CF2;
+  --rumor-soft: #2A2142;
+  --primary: #E8ECF2;
+  --primary-ink: #0D1016;
+  --focus: #6EA0FF;
+  --chat-bg: #0F1823;
+  --bubble: #1C2633;
+  --scrim: rgba(0, 0, 0, 0.55);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 32px rgba(0, 0, 0, 0.45);
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+h1, h2, h3 { margin: 0; text-wrap: balance; }
+p { margin: 0; }
+button, input, select { font: inherit; color: inherit; }
+a { color: inherit; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 6px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.muted { color: var(--muted); }
+.tick { font-family: var(--font-mono); font-weight: 600; letter-spacing: 0.01em; }
+.num { font-variant-numeric: tabular-nums; }
+
+/* ---------- top bar ---------- */
+.topbar {
+  position: sticky;
+  top: env(safe-area-inset-top, 0px);
+  z-index: 20;
+  background: color-mix(in srgb, var(--bg) 90%, transparent);
+  backdrop-filter: saturate(1.4) blur(10px);
+  -webkit-backdrop-filter: saturate(1.4) blur(10px);
+  border-bottom: 1px solid var(--line);
+}
+.topbar-inner {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0 16px;
+  min-height: 62px;
+  display: flex;
+  align-items: center;
+  gap: 28px;
+}
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 18px;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+.mark-bg { fill: var(--ink); }
+.mark-line { fill: none; stroke: var(--bg); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.mark-dot { fill: var(--star); }
+.nav { display: flex; gap: 4px; flex: 1; }
+.nav a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border-radius: 8px;
+  text-decoration: none;
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 14px;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+.nav a:hover { color: var(--ink); background: var(--surface-2); }
+.nav a[aria-current="page"] { color: var(--ink); background: var(--surface); border-color: var(--line); }
+.count {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 10px;
+  background: var(--star-soft);
+  color: var(--star);
+}
+.me { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; }
+.me-text { display: flex; flex-direction: column; line-height: 1.2; }
+.me-name { font-weight: 600; font-size: 14px; }
+.me-status { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--buy); display: inline-block; }
+.dot.off { background: var(--line-strong); }
+.avatar {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  display: inline-grid; place-items: center;
+  background: var(--surface-2);
+  color: var(--ink-2);
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 15px;
+  flex: none;
+}
+.avatar.sm { width: 32px; height: 32px; font-size: 13px; }
+.avatar.lg { width: 52px; height: 52px; font-size: 19px; }
+
+/* ---------- layout ---------- */
+.wrap { max-width: 1120px; margin: 0 auto; padding-inline: 16px; padding-block: 20px 72px; }
+.sample-note {
+  font-size: 13px;
+  color: var(--muted);
+  background: var(--surface-2);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-bottom: 24px;
+}
+.sample-note strong { color: var(--ink-2); font-weight: 600; }
+.view-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px 24px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+.view-head h1 { font-family: var(--font-display); font-weight: 700; font-size: 30px; letter-spacing: -0.02em; line-height: 1.1; }
+.view-head .sub { color: var(--muted); margin-top: 6px; max-width: 62ch; }
+.stat { display: flex; align-items: baseline; gap: 8px; }
+.stat-n { font-family: var(--font-display); font-weight: 700; font-size: 30px; line-height: 1; font-variant-numeric: tabular-nums; }
+.stat-l { color: var(--muted); font-size: 13px; }
+
+/* ---------- controls ---------- */
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; align-items: center; }
+.search { position: relative; flex: 1 1 240px; }
+.search svg { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; stroke: var(--muted); fill: none; stroke-width: 2; }
+.input, select {
+  height: 38px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: 8px;
+  padding: 0 12px;
+}
+.search .input { width: 100%; padding-left: 34px; }
+select { padding-right: 8px; cursor: pointer; }
+.input:hover, select:hover { border-color: var(--line-strong); }
+.check {
+  display: inline-flex; align-items: center; gap: 8px;
+  height: 38px; padding: 0 12px;
+  border: 1px solid var(--line); border-radius: 8px;
+  background: var(--surface);
+  cursor: pointer; font-size: 14px; white-space: nowrap;
+}
+.check input { accent-color: var(--star); width: 15px; height: 15px; margin: 0; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); padding: 3px; margin: 0; gap: 2px; }
+.seg legend { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.seg input { position: absolute; opacity: 0; pointer-events: none; }
+.seg label { padding: 5px 12px; border-radius: 6px; font-size: 14px; font-weight: 500; color: var(--muted); cursor: pointer; white-space: nowrap; }
+.seg input:checked + label { background: var(--surface-2); color: var(--ink); font-weight: 600; }
+.seg input:focus-visible + label { outline: 2px solid var(--focus); outline-offset: 1px; }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  height: 40px; padding: 0 16px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  font-weight: 600; font-size: 14px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn.primary { background: var(--primary); color: var(--primary-ink); }
+.btn.primary:hover { opacity: 0.9; }
+.btn.ghost { background: transparent; border-color: var(--line); color: var(--ink); }
+.btn.ghost:hover { background: var(--surface-2); }
+.btn.tg { background: var(--tg); color: #fff; }
+.btn.tg:hover { background: var(--tg-hover); }
+.btn.tg svg { width: 18px; height: 18px; fill: #fff; }
+.btn[disabled] { opacity: 0.6; cursor: progress; }
+
+.star {
+  width: 32px; height: 32px;
+  display: inline-grid; place-items: center;
+  border: 0; background: transparent; border-radius: 8px;
+  cursor: pointer;
+}
+.star:hover { background: var(--star-soft); }
+.star svg { width: 19px; height: 19px; fill: none; stroke: var(--line-strong); stroke-width: 1.8; stroke-linejoin: round; }
+.star:hover svg { stroke: var(--star); }
+.star[aria-pressed="true"] svg { fill: var(--star); stroke: var(--star); }
+.star-wide { border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
+.star-wide svg { width: 17px; height: 17px; fill: none; stroke: var(--muted); stroke-width: 1.8; stroke-linejoin: round; }
+.star-wide[aria-pressed="true"] { background: var(--star-soft); border-color: transparent; color: var(--star); }
+.star-wide[aria-pressed="true"] svg { fill: var(--star); stroke: var(--star); }
+
+.pill {
+  display: inline-flex; align-items: center;
+  font-family: var(--font-mono); font-weight: 600; font-size: 11px; line-height: 1;
+  letter-spacing: 0.05em; text-transform: uppercase;
+  padding: 4px 7px; border-radius: 5px; white-space: nowrap;
+}
+.pill.buy { color: var(--buy); background: var(--buy-soft); }
+.pill.sell { color: var(--sell); background: var(--sell-soft); }
+.pill.rumor { color: var(--rumor); background: var(--rumor-soft); }
+.pill.neutral { color: var(--muted); background: var(--surface-2); }
+.pill.ok { color: var(--buy); background: var(--buy-soft); }
+
+/* ---------- stocks table ---------- */
+.table-wrap { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+th {
+  text-align: left; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em;
+  color: var(--muted); padding: 11px 14px; border-bottom: 1px solid var(--line); white-space: nowrap;
+}
+td { padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+tbody tr:last-child td { border-bottom: 0; }
+tbody tr.row { cursor: pointer; }
+tbody tr.row:hover td { background: var(--surface-2); }
+td.c-star, th.c-star { width: 48px; padding-right: 0; padding-left: 8px; }
+td.c-co { font-weight: 500; }
+td.c-sector { color: var(--muted); font-size: 14px; white-space: nowrap; }
+.latest { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; font-size: 14px; }
+.latest .v { font-family: var(--font-mono); font-size: 13px; font-weight: 500; }
+.act { display: flex; align-items: center; gap: 10px; white-space: nowrap; font-size: 13px; color: var(--muted); }
+.split { display: flex; width: 56px; height: 6px; border-radius: 3px; overflow: hidden; background: var(--surface-2); flex: none; }
+.split .b { background: var(--buy); }
+.split .s { background: var(--sell); }
+.empty { text-align: center; color: var(--muted); padding: 40px 16px; }
+.foot { color: var(--muted); font-size: 13px; margin-top: 12px; }
+
+/* ---------- politicians ---------- */
+.pol-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+.pol {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+  padding: 16px; display: flex; flex-direction: column; gap: 14px;
+  cursor: pointer; text-align: left;
+}
+.pol:hover { border-color: var(--line-strong); }
+.pol-top { display: flex; gap: 12px; align-items: flex-start; }
+.pol-id { flex: 1; min-width: 0; }
+.pol-name { font-weight: 700; font-size: 16px; line-height: 1.25; }
+.pol-role { color: var(--muted); font-size: 13px; margin-top: 2px; }
+.pol-comm { color: var(--muted); font-size: 12px; margin-top: 6px; line-height: 1.4; }
+.pol-last { border-top: 1px solid var(--line); padding-top: 12px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 14px; }
+.pol-last .range { font-family: var(--font-mono); font-size: 12px; color: var(--ink-2); }
+.pol-last .when { color: var(--muted); font-size: 13px; margin-left: auto; }
+.pol-grid .empty { grid-column: 1 / -1; background: var(--surface); border: 1px dashed var(--line-strong); border-radius: 12px; }
+
+/* ---------- alerts feed ---------- */
+.feed { display: flex; flex-direction: column; gap: 10px; }
+.alert { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; display: grid; gap: 6px; }
+.alert-top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 13px; }
+.alert-top .src { color: var(--ink-2); font-weight: 600; }
+.alert-top .sent { margin-left: auto; color: var(--muted); display: inline-flex; align-items: center; gap: 6px; }
+.alert-top .sent svg { width: 14px; height: 14px; stroke: var(--buy); fill: none; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.alert-main { font-weight: 700; font-size: 16px; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.alert-main .co { font-weight: 500; color: var(--ink-2); font-size: 15px; }
+.alert-body { color: var(--ink-2); }
+.alert-body .v { font-family: var(--font-mono); font-size: 14px; font-weight: 500; color: var(--ink); }
+.alert-body q { font-style: italic; }
+.alert-meta { color: var(--muted); font-size: 13px; }
+.alert.is-rumor { border-style: dashed; border-color: var(--line-strong); }
+
+/* ---------- settings ---------- */
+.settings-grid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr); gap: 16px; align-items: start; }
+.stack { display: flex; flex-direction: column; gap: 16px; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 20px; }
+.panel h2 { font-family: var(--font-display); font-weight: 700; font-size: 19px; letter-spacing: -0.01em; }
+.panel .sub { color: var(--muted); font-size: 14px; margin-top: 4px; }
+.tg-account { display: flex; align-items: center; gap: 14px; margin-top: 16px; }
+.tg-account .who { flex: 1; min-width: 0; }
+.tg-account .nm { font-weight: 700; }
+.tg-account .hd { color: var(--muted); font-size: 14px; font-family: var(--font-mono); }
+.tg-help { color: var(--muted); font-size: 14px; margin-top: 14px; }
+.btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+.prefs { list-style: none; margin: 14px 0 0; padding: 0; }
+.prefs li { display: flex; gap: 16px; align-items: flex-start; padding: 12px 0; border-top: 1px solid var(--line); }
+.prefs li:first-child { border-top: 0; }
+.prefs .txt { flex: 1; }
+.prefs .t { font-weight: 600; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.prefs .d { color: var(--muted); font-size: 14px; margin-top: 2px; }
+.switch { appearance: none; -webkit-appearance: none; width: 40px; height: 24px; border-radius: 12px; background: var(--line-strong); position: relative; cursor: pointer; flex: none; margin: 2px 0 0; transition: background 0.15s; }
+.switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.25); transition: transform 0.15s; }
+.switch:checked { background: var(--buy); }
+.switch:checked::after { transform: translateX(16px); }
+.switch:disabled { opacity: 0.55; cursor: not-allowed; }
+.fine { color: var(--muted); font-size: 13px; }
+.dl { display: grid; grid-template-columns: auto 1fr; gap: 10px 20px; margin: 14px 0 0; font-size: 14px; }
+.dl dt { color: var(--muted); }
+.dl dd { margin: 0; font-weight: 500; }
+
+.preview { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 80px); }
+.tg-chat { margin-top: 14px; background: var(--chat-bg); border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 8px; max-height: 560px; overflow-y: auto; }
+.tg-bothead { display: flex; align-items: center; gap: 10px; padding: 2px 2px 8px; border-bottom: 1px solid color-mix(in srgb, var(--muted) 25%, transparent); margin-bottom: 4px; }
+.tg-bothead .avatar { background: var(--tg); color: #fff; }
+.tg-bothead .nm { font-weight: 700; font-size: 14px; }
+.tg-bothead .st { font-size: 12px; color: var(--muted); }
+.bubble { background: var(--bubble); border-radius: 12px 12px 12px 4px; padding: 8px 12px 6px; max-width: 92%; font-size: 14px; line-height: 1.45; box-shadow: 0 1px 1px rgba(0,0,0,.06); }
+.bubble b { font-weight: 700; }
+.bubble .ln { display: block; }
+.bubble .lk { color: var(--tg); text-decoration: none; font-weight: 500; }
+.bubble .tm { display: block; text-align: right; font-size: 11px; color: var(--muted); margin-top: 2px; }
+.bubble.fresh { animation: pop 0.25s ease-out; }
+@keyframes pop { from { transform: translateY(6px); opacity: 0.4; } to { transform: none; opacity: 1; } }
+
+/* ---------- drawer ---------- */
+.scrim { position: fixed; inset: 0; background: var(--scrim); z-index: 40; }
+.drawer {
+  position: fixed; top: 0; right: 0; bottom: 0; z-index: 41;
+  width: min(460px, 100%);
+  background: var(--surface); border-left: 1px solid var(--line); box-shadow: var(--shadow);
+  overflow-y: auto;
+  padding: calc(env(safe-area-inset-top, 0px) + 20px) 20px calc(env(safe-area-inset-bottom, 0px) + 32px);
+  transform: translateX(100%); transition: transform 0.2s ease-out;
+  visibility: hidden;
+}
+.drawer.open { transform: none; visibility: visible; }
+.d-head { display: flex; align-items: flex-start; gap: 12px; }
+.d-head .grow { flex: 1; min-width: 0; }
+.eyebrow { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.d-title { font-family: var(--font-display); font-weight: 700; font-size: 24px; letter-spacing: -0.01em; line-height: 1.15; margin-top: 4px; }
+.d-title .tick { font-size: 20px; margin-right: 6px; }
+.d-close { width: 36px; height: 36px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); cursor: pointer; display: grid; place-items: center; flex: none; }
+.d-close svg { width: 16px; height: 16px; stroke: var(--ink); stroke-width: 2; stroke-linecap: round; }
+.d-sub { color: var(--muted); font-size: 14px; margin-top: 4px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.chip { font-size: 12px; padding: 3px 9px; border-radius: 12px; background: var(--surface-2); color: var(--ink-2); }
+.d-actions { margin-top: 18px; }
+.d-section { margin-top: 26px; }
+.d-section h3 { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); }
+.d-section .note { color: var(--muted); font-size: 13px; margin-top: 4px; }
+.trades { list-style: none; margin: 12px 0 0; padding: 0; }
+.trades li { padding: 14px 0; border-top: 1px solid var(--line); display: grid; gap: 4px; }
+.trades .r1 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.trades .r1 .dt { margin-left: auto; color: var(--muted); font-size: 13px; }
+.trades .who { font-weight: 600; }
+.trades .amt { font-family: var(--font-mono); font-size: 13px; }
+.trades .meta { color: var(--muted); font-size: 13px; display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+.linkish { background: none; border: 0; padding: 0; color: var(--focus); font-size: 13px; font-weight: 600; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+
+/* ---------- login ---------- */
+.login { padding-inline: 16px; padding-block: 10vh 64px; display: flex; justify-content: center; }
+.login-card { width: 100%; max-width: 460px; display: flex; flex-direction: column; gap: 18px; }
+.login-card h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(32px, 7vw, 42px); letter-spacing: -0.025em; line-height: 1.05; }
+.login-card .lead { color: var(--ink-2); font-size: 17px; }
+.login-card .btn.tg { height: 48px; font-size: 16px; align-self: flex-start; padding: 0 22px; border-radius: 24px; }
+.how { list-style: none; counter-reset: how; margin: 10px 0 0; padding: 18px 0 0; border-top: 1px solid var(--line); display: grid; gap: 12px; }
+.how li { counter-increment: how; display: flex; gap: 12px; align-items: baseline; color: var(--ink-2); }
+.how li::before { content: counter(how); font-family: var(--font-mono); font-size: 12px; font-weight: 600; color: var(--muted); width: 22px; height: 22px; border: 1px solid var(--line-strong); border-radius: 50%; display: inline-grid; place-items: center; flex: none; transform: translateY(-1px); }
+
+/* ---------- toast ---------- */
+.toast {
+  position: fixed; left: 50%; transform: translateX(-50%);
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 20px);
+  z-index: 60; max-width: calc(100% - 32px);
+  background: var(--primary); color: var(--primary-ink);
+  padding: 10px 16px; border-radius: 8px; font-size: 14px; font-weight: 500;
+  box-shadow: var(--shadow);
+}
+
+@media (max-width: 880px) {
+  .settings-grid { grid-template-columns: minmax(0, 1fr); }
+  .preview { position: static; }
+}
+@media (max-width: 720px) {
+  .topbar-inner { flex-wrap: wrap; gap: 8px 16px; padding-block: 10px 0; }
+  .brand { flex: 1; }
+  .nav { order: 3; flex: 1 0 100%; overflow-x: auto; margin-inline: -16px; padding: 0 16px 8px; }
+  .me-text { display: none; }
+  .c-sector, .c-act { display: none; }
+  .view-head h1 { font-size: 26px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .drawer, .switch, .switch::after { transition: none; }
+  .bubble.fresh { animation: none; }
+}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 3.6l2.55 5.2 5.75.84-4.16 4.05.98 5.72L12 16.7l-5.12 2.7.98-5.72L3.7 9.64l5.75-.84z"/></symbol>
+  <symbol id="i-send" viewBox="0 0 24 24"><path d="M20.7 3.3c.5-.2 1 .3.8.8l-6.3 16.6c-.2.6-1.1.6-1.3 0l-2.4-6.2-6.2-2.4c-.6-.2-.6-1.1 0-1.3z"/></symbol>
+</svg>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="#stocks">
+      <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><rect class="mark-bg" width="28" height="28" rx="7"/><path class="mark-line" d="M6.5 18.5l5-5 4 3 5-6"/><circle class="mark-dot" cx="21.2" cy="9.3" r="2.6"/></svg>
+      Insider Alerts
+    </a>
+    <nav class="nav" aria-label="Sections">
+      <a href="#stocks">Stocks <span class="count" id="nav-stocks">0</span></a>
+      <a href="#politicians">Politicians <span class="count" id="nav-pols">0</span></a>
+      <a href="#alerts">Alerts</a>
+      <a href="#settings">Settings</a>
+    </nav>
+    <a class="me" href="#settings" aria-label="Account and Telegram settings">
+      <span class="avatar sm">U</span>
+      <span class="me-text"><span class="me-name">Umer</span><span class="me-status"><i class="dot" id="me-dot"></i><span id="me-status">Telegram connected</span></span></span>
+    </a>
+  </div>
+</header>
+
+<main class="wrap" id="app">
+  <p class="sample-note"><strong>Prototype with example data.</strong> The companies are real S&amp;P 500 members, but every trade, insider, politician and forum post shown here is made up.</p>
+
+  <!-- STOCKS -->
+  <section data-view="stocks" aria-labelledby="stocks-h">
+    <div class="view-head">
+      <div>
+        <h1 id="stocks-h">Stocks</h1>
+        <p class="sub">S&amp;P 500 · 503 companies. Star a company to get a Telegram alert whenever one of its insiders files a buy or sell on SEC Form 4.</p>
+      </div>
+      <div class="stat"><span class="stat-n" id="stocks-watching">0</span><span class="stat-l">watching</span></div>
+    </div>
+    <div class="toolbar">
+      <label class="search">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+        <input class="input" id="stock-q" type="search" placeholder="Search ticker or company" autocomplete="off" aria-label="Search stocks">
+      </label>
+      <select id="stock-sector" aria-label="Filter by sector"><option value="">All sectors</option></select>
+      <select id="stock-sort" aria-label="Sort companies">
+        <option value="recent">Sort: latest insider trade</option>
+        <option value="activity">Sort: most insider trades</option>
+        <option value="ticker">Sort: ticker A–Z</option>
+      </select>
+      <label class="check"><input type="checkbox" id="stock-starred"> Starred only</label>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th class="c-star"><span class="sr">Star</span></th>
+          <th>Ticker</th>
+          <th>Company</th>
+          <th class="c-sector">Sector</th>
+          <th>Latest insider trade</th>
+          <th class="c-act">Last 90 days</th>
+        </tr></thead>
+        <tbody id="stocks-body"></tbody>
+      </table>
+    </div>
+    <p class="foot">Showing 60 sample companies. The live app lists all 503. Click a row to see its insider trades.</p>
+  </section>
+
+  <!-- POLITICIANS -->
+  <section data-view="politicians" aria-labelledby="pols-h" hidden>
+    <div class="view-head">
+      <div>
+        <h1 id="pols-h">Politicians</h1>
+        <p class="sub">Congress · 535 members. Star a member to get a Telegram alert whenever they disclose a buy or sell. Members have up to 45 days to file.</p>
+      </div>
+      <div class="stat"><span class="stat-n" id="pols-watching">0</span><span class="stat-l">watching</span></div>
+    </div>
+    <div class="toolbar">
+      <label class="search">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+        <input class="input" id="pol-q" type="search" placeholder="Search by name" autocomplete="off" aria-label="Search politicians">
+      </label>
+      <fieldset class="seg">
+        <legend>Chamber</legend>
+        <input type="radio" name="pol-chamber" id="ch-all" value="" checked><label for="ch-all">All</label>
+        <input type="radio" name="pol-chamber" id="ch-sen" value="Senate"><label for="ch-sen">Senate</label>
+        <input type="radio" name="pol-chamber" id="ch-house" value="House"><label for="ch-house">House</label>
+      </fieldset>
+      <select id="pol-party" aria-label="Filter by party">
+        <option value="">All parties</option>
+        <option value="D">Democrat</option>
+        <option value="R">Republican</option>
+        <option value="I">Independent</option>
+      </select>
+      <select id="pol-state" aria-label="Filter by state"><option value="">All states</option></select>
+      <label class="check"><input type="checkbox" id="pol-starred"> Starred only</label>
+    </div>
+    <div class="pol-grid" id="pol-grid"></div>
+    <p class="foot">Showing 24 fictional sample members. The live app lists every current member of Congress.</p>
+  </section>
+
+  <!-- ALERTS -->
+  <section data-view="alerts" aria-labelledby="alerts-h" hidden>
+    <div class="view-head">
+      <div>
+        <h1 id="alerts-h">Alerts</h1>
+        <p class="sub">Every alert sent to your Telegram, newest first. Filings are checked once a day, so a newly starred company or politician starts alerting from the next check.</p>
+      </div>
+      <div class="stat"><span class="stat-n" id="alerts-count">0</span><span class="stat-l">sent in the last 30 days</span></div>
+    </div>
+    <div class="toolbar">
+      <fieldset class="seg">
+        <legend>Show</legend>
+        <input type="radio" name="alert-filter" id="af-all" value="all" checked><label for="af-all">All</label>
+        <input type="radio" name="alert-filter" id="af-ins" value="insider"><label for="af-ins">Insiders</label>
+        <input type="radio" name="alert-filter" id="af-pol" value="politician"><label for="af-pol">Politicians</label>
+        <input type="radio" name="alert-filter" id="af-rum" value="rumor"><label for="af-rum">Unverified</label>
+      </fieldset>
+    </div>
+    <div class="feed" id="feed"></div>
+  </section>
+
+  <!-- SETTINGS -->
+  <section data-view="settings" aria-labelledby="settings-h" hidden>
+    <div class="view-head">
+      <div>
+        <h1 id="settings-h">Settings</h1>
+        <p class="sub">Your Telegram connection and what you get alerted about.</p>
+      </div>
+    </div>
+    <div class="settings-grid">
+      <div class="stack">
+        <section class="panel" aria-labelledby="tg-h">
+          <h2 id="tg-h">Telegram</h2>
+          <div id="tg-state"></div>
+        </section>
+        <section class="panel" aria-labelledby="pref-h">
+          <h2 id="pref-h">What you get alerted about</h2>
+          <p class="sub">Applies to every company and politician you star.</p>
+          <ul class="prefs">
+            <li>
+              <div class="txt"><div class="t">Buys <span class="pill buy">Buy</span></div><p class="d">Open-market purchases by company insiders (Form 4 code P) and purchases disclosed by politicians.</p></div>
+              <input type="checkbox" class="switch" id="pref-buys" role="switch" checked disabled aria-label="Buys (always on)">
+            </li>
+            <li>
+              <div class="txt"><div class="t">Sells <span class="pill sell">Sell</span></div><p class="d">Open-market sales by company insiders (Form 4 code S) and full or partial sales disclosed by politicians.</p></div>
+              <input type="checkbox" class="switch" id="pref-sells" role="switch" checked disabled aria-label="Sells (always on)">
+            </li>
+            <li>
+              <div class="txt"><div class="t">Unverified forum signals <span class="pill rumor">Unverified</span></div><p class="d">Reddit and StockTwits posts that mention your starred stocks or politicians. These are claims, not filings, and are always labelled that way.</p></div>
+              <input type="checkbox" class="switch" id="pref-rumors" role="switch" checked aria-label="Unverified forum signals">
+            </li>
+          </ul>
+          <p class="fine">Stock grants, option exercises and shares withheld for tax are skipped. Buys and sells can't be turned off yet.</p>
+        </section>
+        <section class="panel" aria-labelledby="del-h">
+          <h2 id="del-h">Delivery and account</h2>
+          <dl class="dl">
+            <dt>Format</dt><dd>One Telegram message per trade</dd>
+            <dt>Schedule</dt><dd>Filings checked once a day, each morning (US Eastern)</dd>
+            <dt>Sign-in</dt><dd>Telegram</dd>
+          </dl>
+          <div class="btn-row"><button class="btn ghost" id="logout" type="button">Log out</button></div>
+        </section>
+      </div>
+      <section class="panel preview" aria-labelledby="pv-h">
+        <h2 id="pv-h">Message preview</h2>
+        <p class="sub">What alerts look like in your Telegram chat with the bot.</p>
+        <div class="tg-chat" id="tg-chat">
+          <div class="tg-bothead"><span class="avatar sm">IA</span><div><div class="nm">Insider Alerts</div><div class="st">bot</div></div></div>
+        </div>
+      </section>
+    </div>
+  </section>
+</main>
+
+<!-- LOGIN -->
+<section data-view="login" class="login" aria-labelledby="login-h" hidden>
+  <div class="login-card">
+    <span class="brand">
+      <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><rect class="mark-bg" width="28" height="28" rx="7"/><path class="mark-line" d="M6.5 18.5l5-5 4 3 5-6"/><circle class="mark-dot" cx="21.2" cy="9.3" r="2.6"/></svg>
+      Insider Alerts
+    </span>
+    <h1 id="login-h">Know when insiders and politicians trade.</h1>
+    <p class="lead">Star the S&amp;P 500 companies and members of Congress you follow. When one of them discloses a buy or sell, you get a Telegram message.</p>
+    <button class="btn tg" id="login-btn" type="button"><svg aria-hidden="true"><use href="#i-send"/></svg>Log in with Telegram</button>
+    <p class="fine">Logging in with Telegram also lets our bot message you. There's no password and no email.</p>
+    <ol class="how">
+      <li>Star the companies and politicians you care about.</li>
+      <li>Each morning we check new SEC Form 4 filings and congressional trade disclosures.</li>
+      <li>Every buy or sell from someone you starred arrives as its own Telegram message.</li>
+    </ol>
+    <p class="fine">Prototype: the button skips the real Telegram login.</p>
+  </div>
+</section>
+
+<div class="scrim" id="scrim" hidden></div>
+<aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="d-title"></aside>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<script>
+(function () {
+  "use strict";
+  const $ = (s, r) => (r || document).querySelector(s);
+  const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
+
+  // ---------- deterministic sample data ----------
+  function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+  const rng = mulberry32(20260923);
+  const pick = a => a[Math.floor(rng() * a.length)];
+  const between = (lo, hi) => lo + rng() * (hi - lo);
+  const intBetween = (lo, hi) => Math.floor(between(lo, hi + 1));
+
+  const TODAY = new Date(); TODAY.setHours(0, 0, 0, 0);
+  const daysAgo = n => { const d = new Date(TODAY); d.setDate(d.getDate() - n); return d; };
+  const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const fmtDate = d => MONTHS[d.getMonth()] + " " + d.getDate();
+  const dayDiff = (a, b) => Math.round((a - b) / 864e5);
+  const ago = d => { const n = dayDiff(TODAY, d); return n <= 0 ? "today" : n === 1 ? "yesterday" : n + "d ago"; };
+  const money = v => v >= 1e6 ? "$" + (v / 1e6).toFixed(v >= 1e7 ? 0 : 1) + "M" : "$" + Math.round(v / 1e3) + "K";
+  const num = n => n.toLocaleString("en-US");
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const plural = (n, w) => n + " " + w + (n === 1 ? "" : "s");
+
+  const RAW_COMPANIES = [
+    ["AAPL","Apple","Information Technology"],["MSFT","Microsoft","Information Technology"],["NVDA","NVIDIA","Information Technology"],
+    ["AMZN","Amazon.com","Consumer Discretionary"],["GOOGL","Alphabet (Class A)","Communication Services"],["META","Meta Platforms","Communication Services"],
+    ["BRK.B","Berkshire Hathaway","Financials"],["TSLA","Tesla","Consumer Discretionary"],["AVGO","Broadcom","Information Technology"],
+    ["JPM","JPMorgan Chase","Financials"],["LLY","Eli Lilly","Health Care"],["V","Visa","Financials"],
+    ["UNH","UnitedHealth Group","Health Care"],["XOM","Exxon Mobil","Energy"],["MA","Mastercard","Financials"],
+    ["JNJ","Johnson & Johnson","Health Care"],["PG","Procter & Gamble","Consumer Staples"],["HD","Home Depot","Consumer Discretionary"],
+    ["COST","Costco","Consumer Staples"],["ORCL","Oracle","Information Technology"],["ABBV","AbbVie","Health Care"],
+    ["WMT","Walmart","Consumer Staples"],["BAC","Bank of America","Financials"],["NFLX","Netflix","Communication Services"],
+    ["KO","Coca-Cola","Consumer Staples"],["CVX","Chevron","Energy"],["CRM","Salesforce","Information Technology"],
+    ["AMD","Advanced Micro Devices","Information Technology"],["PEP","PepsiCo","Consumer Staples"],["MRK","Merck","Health Care"],
+    ["TMO","Thermo Fisher Scientific","Health Care"],["ADBE","Adobe","Information Technology"],["CSCO","Cisco","Information Technology"],
+    ["LIN","Linde","Materials"],["ACN","Accenture","Information Technology"],["MCD","McDonald's","Consumer Discretionary"],
+    ["ABT","Abbott Laboratories","Health Care"],["WFC","Wells Fargo","Financials"],["GE","GE Aerospace","Industrials"],
+    ["CAT","Caterpillar","Industrials"],["INTU","Intuit","Information Technology"],["IBM","IBM","Information Technology"],
+    ["DIS","Walt Disney","Communication Services"],["VZ","Verizon","Communication Services"],["GS","Goldman Sachs","Financials"],
+    ["BA","Boeing","Industrials"],["LMT","Lockheed Martin","Industrials"],["RTX","RTX","Industrials"],
+    ["NEE","NextEra Energy","Utilities"],["PLD","Prologis","Real Estate"],["UNP","Union Pacific","Industrials"],
+    ["SHW","Sherwin-Williams","Materials"],["DUK","Duke Energy","Utilities"],["AMT","American Tower","Real Estate"],
+    ["PFE","Pfizer","Health Care"],["T","AT&T","Communication Services"],["NKE","Nike","Consumer Discretionary"],
+    ["SBUX","Starbucks","Consumer Discretionary"],["F","Ford Motor","Consumer Discretionary"],["FCX","Freeport-McMoRan","Materials"]
+  ];
+  const INSIDERS = ["J. Alvarez","M. Chen","R. Whitford","S. Patel","K. Brennan","L. Okonkwo","D. Hartley","A. Moreau","T. Nakamura","E. Lindgren","P. Sullivan","G. Adeyemi","C. Romano","H. Becker","N. Farrow","V. Iyer"];
+  const ROLES = ["Chief Executive Officer","Chief Financial Officer","Director","Director","EVP, Operations","General Counsel","Chief Technology Officer","10% Owner"];
+
+  const STOCK_PRESET = ["NVDA","AAPL","LMT","JPM","XOM","TSLA"];
+  const POL_PRESET = ["hollis","whitcombe","marchetti","ferro"];
+
+  const companies = RAW_COMPANIES.map(([t, n, s]) => ({ t, n, s, trades: [] }));
+  const byTicker = Object.fromEntries(companies.map(c => [c.t, c]));
+
+  function insiderTrade(c, maxAgo, minAgo) {
+    const buy = rng() < 0.3;
+    const tradeAgo = intBetween(minAgo || 2, maxAgo || 85);
+    const lag = Math.min(pick([1, 1, 2, 2, 2]), tradeAgo);
+    const value = buy ? between(60e3, 3.2e6) : between(250e3, 14e6);
+    const price = between(35, 620);
+    const shares = Math.max(10, Math.round(value / price / 10) * 10);
+    return { kind: "insider", buy, code: buy ? "P" : "S", who: pick(INSIDERS), role: pick(ROLES), shares, value: shares * price,
+             traded: daysAgo(tradeAgo), filed: daysAgo(tradeAgo - lag), lag, company: c };
+  }
+  companies.forEach(c => {
+    const preset = STOCK_PRESET.includes(c.t);
+    const count = preset ? intBetween(2, 5) : pick([0, 1, 1, 2, 2, 3, 4, 5]);
+    for (let i = 0; i < count; i++) c.trades.push(insiderTrade(c));
+    if (preset) c.trades.push(insiderTrade(c, 9, 2));
+    c.trades.sort((a, b) => b.filed - a.filed);
+  });
+
+  const STATES = { AZ:"Arizona", CA:"California", FL:"Florida", GA:"Georgia", IL:"Illinois", IN:"Indiana", KS:"Kansas", LA:"Louisiana", MD:"Maryland", MI:"Michigan", MN:"Minnesota", MT:"Montana", NC:"North Carolina", NM:"New Mexico", NV:"Nevada", NY:"New York", OH:"Ohio", OR:"Oregon", PA:"Pennsylvania", TN:"Tennessee", TX:"Texas", VT:"Vermont", WA:"Washington", WI:"Wisconsin" };
+  const PARTY = { D: "Democrat", R: "Republican", I: "Independent" };
+  const RAW_POLS = [
+    ["hollis","Margaret Hollis","Senate","D","OR",["Armed Services","Energy and Natural Resources"]],
+    ["whitcombe","Graham Whitcombe","Senate","R","TX",["Banking, Housing, and Urban Affairs","Finance"]],
+    ["vasquez-reed","Elena Vasquez-Reed","Senate","D","AZ",["Commerce, Science, and Transportation","Intelligence"]],
+    ["brunner","Carl Brunner","Senate","R","OH",["Appropriations","Armed Services"]],
+    ["okafor","Dana Okafor","Senate","D","GA",["Health, Education, Labor, and Pensions","Judiciary"]],
+    ["pike","Russell Pike","Senate","R","MT",["Energy and Natural Resources","Agriculture, Nutrition, and Forestry"]],
+    ["castellano","Irene Castellano","Senate","D","NV",["Banking, Housing, and Urban Affairs","Commerce, Science, and Transportation"]],
+    ["haines","Walter Haines","Senate","R","KS",["Finance","Intelligence"]],
+    ["raman","Priya Raman","Senate","D","MI",["Commerce, Science, and Transportation","Appropriations"]],
+    ["albright","Jonah Albright","Senate","I","VT",["Health, Education, Labor, and Pensions","Budget"]],
+    ["marchetti","Theo Marchetti","House","D","NY",["Financial Services","Oversight"]],
+    ["ferro","Linda Ferro","House","R","FL",["Energy and Commerce","Armed Services"]],
+    ["delaney","Marcus Delaney","House","D","IL",["Ways and Means","Science, Space, and Technology"]],
+    ["sorensen","Beth Sorensen","House","R","MN",["Agriculture","Financial Services"]],
+    ["haddad","Omar Haddad","House","D","CA",["Energy and Commerce","Intelligence"]],
+    ["tully","Kevin Tully","House","R","PA",["Appropriations","Ways and Means"]],
+    ["delgado","Rosa Delgado","House","D","NM",["Armed Services","Natural Resources"]],
+    ["oyelaran","Frank Oyelaran","House","R","NC",["Financial Services","Oversight"]],
+    ["whitaker","Susan Whitaker","House","R","TN",["Energy and Commerce","Budget"]],
+    ["pryor","Nathan Pryor","House","D","WA",["Science, Space, and Technology","Transportation and Infrastructure"]],
+    ["estrin","Gloria Estrin","House","D","MD",["Appropriations","Intelligence"]],
+    ["hutchins","Dale Hutchins","House","R","IN",["Armed Services","Agriculture"]],
+    ["beaumont","Andre Beaumont","House","D","LA",["Energy and Commerce","Homeland Security"]],
+    ["lindqvist","Heather Lindqvist","House","R","WI",["Ways and Means","Financial Services"]]
+  ];
+  const RANGES = [[1001,15000],[1001,15000],[15001,50000],[15001,50000],[15001,50000],[50001,100000],[50001,100000],[100001,250000],[250001,500000],[500001,1000000],[1000001,5000000]];
+  const rangeLabel = r => "$" + num(r[0]) + " – $" + num(r[1]);
+  const TICKER_POOL = ["NVDA","MSFT","AAPL","LMT","RTX","XOM","CVX","JPM","GS","AMZN","GOOGL","META","LLY","UNH","BA","PFE","TSLA","AVGO","NFLX","DIS","CAT","NEE","FCX","V"];
+
+  const pols = RAW_POLS.map(([id, name, chamber, party, state, committees]) => ({ id, name, chamber, party, state, committees, trades: [],
+    title: chamber === "Senate" ? "Sen." : "Rep.", short: party + "-" + state }));
+  const byPol = Object.fromEntries(pols.map(p => [p.id, p]));
+
+  function ptrTrade(p, maxAgo, minFiledAgo) {
+    const tradeAgo = intBetween(12 + (minFiledAgo || 0), maxAgo || 120);
+    const lag = intBetween(6, Math.min(44, tradeAgo - (minFiledAgo || 0)));
+    const r = rng();
+    const type = r < 0.45 ? "Purchase" : r < 0.8 ? "Sale (Partial)" : "Sale (Full)";
+    const ticker = p.id === "hollis" && !p.trades.length ? "LMT" : pick(TICKER_POOL);
+    return { kind: "politician", buy: type === "Purchase", type, company: byTicker[ticker], range: pick(RANGES),
+             owner: pick(["Self","Spouse","Spouse","Joint","Self"]), traded: daysAgo(tradeAgo), filed: daysAgo(tradeAgo - lag), lag, pol: p };
+  }
+  pols.forEach(p => {
+    const preset = POL_PRESET.includes(p.id);
+    if (preset) p.trades.push(ptrTrade(p, 40, 2));
+    const count = preset ? intBetween(2, 4) : pick([0, 1, 1, 2, 2, 3, 4]);
+    for (let i = 0; i < count; i++) p.trades.push(ptrTrade(p));
+    p.trades.forEach(t => { if (dayDiff(TODAY, t.filed) < 2 && !preset) { t.filed = daysAgo(2); t.lag = dayDiff(t.filed, t.traded); } });
+    p.trades.sort((a, b) => b.filed - a.filed);
+  });
+
+  // ---------- stars (per-viewer convenience) ----------
+  const STORE_KEY = "ia-prototype-stars-v1";
+  const stars = { stocks: new Set(STOCK_PRESET), pols: new Set(POL_PRESET) };
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORE_KEY) || "null");
+    if (saved && Array.isArray(saved.stocks) && Array.isArray(saved.pols)) {
+      stars.stocks = new Set(saved.stocks.filter(t => byTicker[t]));
+      stars.pols = new Set(saved.pols.filter(id => byPol[id]));
+    }
+  } catch (e) { /* storage unavailable: keep defaults */ }
+  function saveStars() {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify({ stocks: [...stars.stocks], pols: [...stars.pols] })); } catch (e) { /* ignore */ }
+  }
+
+  // ---------- app state ----------
+  const state = { connected: true, rumors: true, testSent: [] };
+
+  // ---------- alert history (built from the default watchlist) ----------
+  const alerts = [];
+  function sentAt(filed, i) { const d = new Date(filed); d.setDate(d.getDate() + 1); d.setHours(7, 1 + (i % 7), 0, 0); return d; }
+  STOCK_PRESET.forEach(t => byTicker[t].trades.forEach(tr => { if (dayDiff(TODAY, tr.filed) <= 30 && dayDiff(TODAY, tr.filed) >= 1) alerts.push({ kind: "insider", trade: tr }); }));
+  POL_PRESET.forEach(id => byPol[id].trades.forEach(tr => { if (dayDiff(TODAY, tr.filed) <= 30 && dayDiff(TODAY, tr.filed) >= 1) alerts.push({ kind: "politician", trade: tr }); }));
+  const RUMORS = [
+    { platform: "StockTwits", where: "$NVDA stream", subject: { type: "stock", c: byTicker.NVDA }, excerpt: "Several posts claim an NVIDIA board member added shares last week. No Form 4 on file yet.", days: 2 },
+    { platform: "Reddit", where: "r/wallstreetbets", subject: { type: "pol", p: byPol.hollis }, excerpt: "Thread alleges Sen. Hollis's spouse bought Lockheed Martin shortly before a contract award. No matching disclosure yet.", days: 5 },
+    { platform: "Reddit", where: "r/stocks", subject: { type: "stock", c: byTicker.XOM }, excerpt: "Post claims Exxon executives are selling ahead of quarterly results, citing an unnamed source.", days: 9 }
+  ];
+  RUMORS.forEach(r => alerts.push({ kind: "rumor", rumor: r, filed: daysAgo(r.days) }));
+  alerts.forEach((a, i) => { a.sent = a.kind === "rumor" ? sentAt(daysAgo(a.rumor.days + 1), i) : sentAt(a.trade.filed, i); });
+  alerts.sort((a, b) => b.sent - a.sent);
+
+  const fmtTime = d => { let h = d.getHours(), m = d.getMinutes(); const ap = h >= 12 ? "PM" : "AM"; h = h % 12 || 12; return h + ":" + String(m).padStart(2, "0") + " " + ap; };
+
+  // ---------- icons ----------
+  const starSvg = '<svg aria-hidden="true"><use href="#i-star"/></svg>';
+  const checkSvg = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+  const closeSvg = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+  const initials = n => n.split(" ").filter(Boolean).map(w => w[0]).filter((_, i, a) => i === 0 || i === a.length - 1).join("");
+
+  function starBtn(kind, id, label) {
+    const on = kind === "stock" ? stars.stocks.has(id) : stars.pols.has(id);
+    return `<button type="button" class="star" data-star="${kind}" data-id="${esc(id)}" aria-pressed="${on}" aria-label="Star ${esc(label)}">${starSvg}</button>`;
+  }
+  function starWide(kind, id) {
+    const on = kind === "stock" ? stars.stocks.has(id) : stars.pols.has(id);
+    return `<button type="button" class="btn star-wide" data-star="${kind}" data-id="${esc(id)}" aria-pressed="${on}">${starSvg}<span>${on ? "Starred · you'll get alerts" : "Star to get alerts"}</span></button>`;
+  }
+  const pill = t => t.buy ? '<span class="pill buy">Buy</span>' : '<span class="pill sell">Sell</span>';
+
+  // ---------- stocks ----------
+  const sectorSel = $("#stock-sector");
+  [...new Set(companies.map(c => c.s))].sort().forEach(s => sectorSel.insertAdjacentHTML("beforeend", `<option value="${esc(s)}">${esc(s)}</option>`));
+
+  function renderStocks() {
+    const q = $("#stock-q").value.trim().toLowerCase();
+    const sec = sectorSel.value;
+    const only = $("#stock-starred").checked;
+    const sort = $("#stock-sort").value;
+    const list = companies.filter(c => (!q || c.t.toLowerCase().includes(q) || c.n.toLowerCase().includes(q)) && (!sec || c.s === sec) && (!only || stars.stocks.has(c.t)));
+    if (sort === "ticker") list.sort((a, b) => a.t.localeCompare(b.t));
+    else if (sort === "activity") list.sort((a, b) => b.trades.length - a.trades.length || a.t.localeCompare(b.t));
+    else list.sort((a, b) => ((b.trades[0] ? +b.trades[0].filed : 0) - (a.trades[0] ? +a.trades[0].filed : 0)) || a.t.localeCompare(b.t));
+
+    const body = $("#stocks-body");
+    if (!list.length) {
+      const msg = only && !stars.stocks.size ? "You haven't starred any companies yet. Star one to get alerts when its insiders trade."
+        : q ? `No companies match “${esc(q)}”.` : "No companies match these filters.";
+      body.innerHTML = `<tr><td colspan="6" class="empty">${msg}</td></tr>`;
+      return;
+    }
+    body.innerHTML = list.map(c => {
+      const t = c.trades[0];
+      const buys = c.trades.filter(x => x.buy).length, sells = c.trades.length - buys;
+      const latest = t ? `<span class="latest">${pill(t)}<span class="v">${money(t.value)}</span><span class="muted">${ago(t.filed)}</span></span>`
+                       : '<span class="muted" style="font-size:14px">No buys or sells</span>';
+      const total = buys + sells || 1;
+      const act = c.trades.length
+        ? `<div class="act"><span class="split"><span class="b" style="width:${buys / total * 100}%"></span><span class="s" style="width:${sells / total * 100}%"></span></span>${buys}&nbsp;buy · ${sells}&nbsp;sell</div>`
+        : '<div class="act">—</div>';
+      return `<tr class="row" data-open="stock" data-id="${esc(c.t)}" tabindex="0">
+        <td class="c-star">${starBtn("stock", c.t, c.t)}</td>
+        <td class="tick">${esc(c.t)}</td>
+        <td class="c-co">${esc(c.n)}</td>
+        <td class="c-sector">${esc(c.s)}</td>
+        <td>${latest}</td>
+        <td class="c-act">${act}</td></tr>`;
+    }).join("");
+  }
+
+  // ---------- politicians ----------
+  const stateSel = $("#pol-state");
+  [...new Set(pols.map(p => p.state))].sort((a, b) => STATES[a].localeCompare(STATES[b])).forEach(s => stateSel.insertAdjacentHTML("beforeend", `<option value="${s}">${STATES[s]}</option>`));
+
+  function renderPols() {
+    const q = $("#pol-q").value.trim().toLowerCase();
+    const ch = ($('input[name="pol-chamber"]:checked') || {}).value || "";
+    const party = $("#pol-party").value, st = stateSel.value, only = $("#pol-starred").checked;
+    const list = pols.filter(p => (!q || p.name.toLowerCase().includes(q)) && (!ch || p.chamber === ch) && (!party || p.party === party) && (!st || p.state === st) && (!only || stars.pols.has(p.id)))
+      .sort((a, b) => (stars.pols.has(b.id) - stars.pols.has(a.id)) || ((b.trades[0] ? +b.trades[0].filed : 0) - (a.trades[0] ? +a.trades[0].filed : 0)));
+    const grid = $("#pol-grid");
+    if (!list.length) {
+      const msg = only && !stars.pols.size ? "You haven't starred any politicians yet. Star one to get alerts when they disclose a trade." : "No members match these filters.";
+      grid.innerHTML = `<p class="empty">${msg}</p>`;
+      return;
+    }
+    grid.innerHTML = list.map(p => {
+      const t = p.trades[0];
+      const last = t ? `${pill(t)}<span class="tick">${esc(t.company.t)}</span><span class="range">${rangeLabel(t.range)}</span><span class="when">filed ${ago(t.filed)}</span>`
+                     : '<span class="muted" style="font-size:14px">No disclosed trades</span>';
+      return `<article class="pol" data-open="pol" data-id="${p.id}" tabindex="0" aria-label="${esc(p.title + " " + p.name)}">
+        <div class="pol-top">
+          <span class="avatar">${initials(p.name)}</span>
+          <div class="pol-id">
+            <div class="pol-name">${esc(p.name)}</div>
+            <div class="pol-role">${p.chamber === "Senate" ? "Senator" : "Representative"} · ${p.short}</div>
+            <div class="pol-comm">${p.committees.map(esc).join(" · ")}</div>
+          </div>
+          ${starBtn("pol", p.id, p.name)}
+        </div>
+        <div class="pol-last">${last}</div>
+      </article>`;
+    }).join("");
+  }
+
+  // ---------- alerts ----------
+  function alertSource(a) {
+    if (a.kind === "insider") return "SEC Form 4";
+    if (a.kind === "politician") return a.trade.pol.chamber === "Senate" ? "Senate disclosure" : "House disclosure";
+    return a.rumor.platform + " · " + a.rumor.where;
+  }
+  function renderAlerts() {
+    const f = ($('input[name="alert-filter"]:checked') || {}).value || "all";
+    const cutoff = daysAgo(30);
+    $("#alerts-count").textContent = alerts.filter(a => a.sent >= cutoff && (state.rumors || a.kind !== "rumor")).length;
+    const feed = $("#feed");
+    if (f === "rumor" && !state.rumors) {
+      feed.innerHTML = '<p class="empty">Unverified forum signals are turned off in <a href="#settings">Settings</a>.</p>';
+      return;
+    }
+    const list = alerts.filter(a => (f === "all" || a.kind === f) && (state.rumors || a.kind !== "rumor"));
+    if (!list.length) { feed.innerHTML = '<p class="empty">No alerts of this type yet.</p>'; return; }
+    feed.innerHTML = list.map(a => {
+      const sent = `<span class="sent">${fmtDate(a.sent)}, ${fmtTime(a.sent)} ${checkSvg}<span>Delivered</span></span>`;
+      if (a.kind === "insider") {
+        const t = a.trade;
+        return `<article class="alert">
+          <div class="alert-top">${pill(t)}<span class="src">${alertSource(a)}</span>${sent}</div>
+          <div class="alert-main"><span class="tick">${esc(t.company.t)}</span><span class="co">${esc(t.company.n)}</span></div>
+          <p class="alert-body">${esc(t.role)} ${esc(t.who)} ${t.buy ? "bought" : "sold"} ${num(t.shares)} shares · <span class="v">${money(t.value)}</span></p>
+          <p class="alert-meta">Traded ${fmtDate(t.traded)} · Filed ${fmtDate(t.filed)} · ${plural(t.lag, "day")} to disclose</p>
+        </article>`;
+      }
+      if (a.kind === "politician") {
+        const t = a.trade;
+        return `<article class="alert">
+          <div class="alert-top">${pill(t)}<span class="src">${alertSource(a)}</span>${sent}</div>
+          <div class="alert-main">${esc(t.pol.title + " " + t.pol.name)} <span class="co">(${t.pol.short})</span></div>
+          <p class="alert-body">${esc(t.type)} of <span class="tick">${esc(t.company.t)}</span> (${esc(t.company.n)}) · <span class="v">${rangeLabel(t.range)}</span> · Owner: ${esc(t.owner)}</p>
+          <p class="alert-meta">Traded ${fmtDate(t.traded)} · Filed ${fmtDate(t.filed)} · ${plural(t.lag, "day")} to disclose</p>
+        </article>`;
+      }
+      const r = a.rumor;
+      const subj = r.subject.type === "stock" ? `<span class="tick">${esc(r.subject.c.t)}</span><span class="co">${esc(r.subject.c.n)}</span>`
+                                              : `${esc(r.subject.p.title + " " + r.subject.p.name)} <span class="co">(${r.subject.p.short})</span>`;
+      return `<article class="alert is-rumor">
+        <div class="alert-top"><span class="pill rumor">Unverified</span><span class="src">${esc(alertSource(a))}</span>${sent}</div>
+        <div class="alert-main">${subj}</div>
+        <p class="alert-body"><q>${esc(r.excerpt)}</q></p>
+        <p class="alert-meta">Posted ${fmtDate(daysAgo(r.days))} · Matched your star · Not a filing</p>
+      </article>`;
+    }).join("");
+  }
+
+  // ---------- telegram message format ----------
+  function messageHTML(a) {
+    if (a.kind === "insider") {
+      const t = a.trade;
+      return `<span class="ln"><b>${t.buy ? "BUY" : "SELL"} · ${esc(t.company.t)}</b> (${esc(t.company.n)})</span>
+        <span class="ln">${esc(t.role)} ${esc(t.who)} ${t.buy ? "bought" : "sold"} ${num(t.shares)} shares</span>
+        <span class="ln">Value: ${money(t.value)}</span>
+        <span class="ln">Traded ${fmtDate(t.traded)} · Filed ${fmtDate(t.filed)}</span>
+        <span class="ln">Source: SEC Form 4 · <a class="lk" href="#settings" data-fake-link>View filing</a></span>`;
+    }
+    if (a.kind === "politician") {
+      const t = a.trade;
+      return `<span class="ln"><b>${t.buy ? "BUY" : "SELL"} · ${esc(t.company.t)}</b> (${esc(t.company.n)})</span>
+        <span class="ln">${esc(t.pol.title + " " + t.pol.name)} (${t.pol.short})</span>
+        <span class="ln">${esc(t.type)} · ${rangeLabel(t.range)} · Owner: ${esc(t.owner)}</span>
+        <span class="ln">Traded ${fmtDate(t.traded)} · Filed ${fmtDate(t.filed)}</span>
+        <span class="ln">Source: ${alertSource(a)} · <a class="lk" href="#settings" data-fake-link>View filing</a></span>`;
+    }
+    const r = a.rumor;
+    const who = r.subject.type === "stock" ? esc(r.subject.c.t) : esc(r.subject.p.title + " " + r.subject.p.name);
+    return `<span class="ln"><b>UNVERIFIED · ${who}</b></span>
+      <span class="ln">“${esc(r.excerpt)}”</span>
+      <span class="ln">Source: ${esc(r.platform)} (${esc(r.where)}) · <a class="lk" href="#settings" data-fake-link>View post</a></span>
+      <span class="ln">This is a claim, not a filing.</span>`;
+  }
+  function renderChat() {
+    const chat = $("#tg-chat");
+    $$(".bubble", chat).forEach(b => b.remove());
+    const examples = [alerts.find(a => a.kind === "insider"), alerts.find(a => a.kind === "politician"), state.rumors ? alerts.find(a => a.kind === "rumor") : null]
+      .filter(Boolean).sort((a, b) => a.sent - b.sent);
+    const html = examples.map(a => `<div class="bubble">${messageHTML(a)}<span class="tm">${fmtDate(a.sent)}, ${fmtTime(a.sent)}</span></div>`)
+      .concat(state.testSent.map((d, i) => `<div class="bubble${i === state.testSent.length - 1 ? " fresh" : ""}"><span class="ln"><b>Test alert</b></span><span class="ln">Your Insider Alerts connection works. Alerts for your starred companies and politicians will arrive here.</span><span class="tm">${fmtTime(d)}</span></div>`));
+    chat.insertAdjacentHTML("beforeend", html.join(""));
+    chat.scrollTop = chat.scrollHeight;
+  }
+
+  // ---------- settings: telegram ----------
+  function renderTelegram() {
+    const box = $("#tg-state");
+    if (state.connected) {
+      box.innerHTML = `<div class="tg-account"><span class="avatar lg">U</span>
+          <div class="who"><div class="nm">Umer</div><div class="hd">@umer</div></div>
+          <span class="pill ok">Connected</span></div>
+        <p class="tg-help">Alerts go to your private chat with the Insider Alerts bot.</p>
+        <div class="btn-row">
+          <button type="button" class="btn primary" id="test-btn"><svg width="16" height="16" aria-hidden="true" style="fill:currentColor"><use href="#i-send"/></svg>Send test notification</button>
+          <button type="button" class="btn ghost" id="disconnect-btn">Disconnect</button>
+        </div>`;
+    } else {
+      box.innerHTML = `<div class="tg-account"><span class="avatar lg">U</span>
+          <div class="who"><div class="nm">Umer</div><div class="hd">Telegram not connected</div></div>
+          <span class="pill neutral">Not connected</span></div>
+        <p class="tg-help">Alerts are paused until you connect Telegram. Your starred companies and politicians are kept.</p>
+        <div class="btn-row"><button type="button" class="btn tg" id="connect-btn"><svg aria-hidden="true"><use href="#i-send"/></svg>Connect Telegram</button></div>`;
+    }
+    $("#me-dot").classList.toggle("off", !state.connected);
+    $("#me-status").textContent = state.connected ? "Telegram connected" : "Telegram not connected";
+  }
+
+  // ---------- drawer ----------
+  const drawer = $("#drawer"), scrim = $("#scrim");
+  let lastFocus = null, drawerCtx = null;
+  function drawerHTML(ctx) {
+    if (ctx.kind === "stock") {
+      const c = byTicker[ctx.id];
+      const items = c.trades.length ? c.trades.map(t => `<li>
+          <div class="r1">${pill(t)}<span class="amt">${money(t.value)}</span><span class="dt">Traded ${fmtDate(t.traded)}</span></div>
+          <div><span class="who">${esc(t.who)}</span> <span class="muted">· ${esc(t.role)}</span></div>
+          <div class="meta"><span class="num">${num(t.shares)} shares · code ${t.code}</span><span>Filed ${fmtDate(t.filed)} (${plural(t.lag, "day")})</span><button type="button" class="linkish" data-fake-link>View filing</button></div>
+        </li>`).join("") : '<li class="muted">No open-market buys or sells in the last 90 days.</li>';
+      return `<div class="d-head"><div class="grow"><div class="eyebrow">${esc(c.s)}</div><h2 class="d-title" id="d-title"><span class="tick">${esc(c.t)}</span>${esc(c.n)}</h2></div>
+          <button type="button" class="d-close" data-close aria-label="Close">${closeSvg}</button></div>
+        <div class="d-actions">${starWide("stock", c.t)}</div>
+        <div class="d-section"><h3>Insider buys and sells</h3><p class="note">From SEC Form 4, last 90 days. Grants, option exercises and tax withholding are hidden.</p><ul class="trades">${items}</ul></div>`;
+    }
+    const p = byPol[ctx.id];
+    const items = p.trades.length ? p.trades.map(t => `<li>
+        <div class="r1">${pill(t)}<span class="tick">${esc(t.company.t)}</span><span class="muted">${esc(t.company.n)}</span><span class="dt">Traded ${fmtDate(t.traded)}</span></div>
+        <div><span class="amt">${rangeLabel(t.range)}</span> <span class="muted">· ${esc(t.type)} · Owner: ${esc(t.owner)}</span></div>
+        <div class="meta"><span>Filed ${fmtDate(t.filed)} (${plural(t.lag, "day")} after the trade)</span><button type="button" class="linkish" data-fake-link>View filing</button></div>
+      </li>`).join("") : '<li class="muted">No disclosed buys or sells yet.</li>';
+    return `<div class="d-head"><span class="avatar lg">${initials(p.name)}</span><div class="grow"><div class="eyebrow">${p.chamber === "Senate" ? "Senator" : "Representative"}</div><h2 class="d-title" id="d-title">${esc(p.name)}</h2>
+          <p class="d-sub">${PARTY[p.party]} · ${STATES[p.state]}</p></div>
+        <button type="button" class="d-close" data-close aria-label="Close">${closeSvg}</button></div>
+      <div class="chips">${p.committees.map(c => `<span class="chip">${esc(c)}</span>`).join("")}</div>
+      <div class="d-actions">${starWide("pol", p.id)}</div>
+      <div class="d-section"><h3>Disclosed buys and sells</h3><p class="note">From ${p.chamber} periodic transaction reports. Amounts are disclosed as ranges, not exact figures.</p><ul class="trades">${items}</ul></div>`;
+  }
+  function openDrawer(ctx) {
+    drawerCtx = ctx;
+    lastFocus = document.activeElement;
+    drawer.innerHTML = drawerHTML(ctx);
+    scrim.hidden = false;
+    drawer.classList.add("open");
+    const btn = $(".d-close", drawer); if (btn) btn.focus();
+  }
+  function closeDrawer() {
+    if (!drawerCtx) return;
+    drawerCtx = null;
+    drawer.classList.remove("open");
+    scrim.hidden = true;
+    if (lastFocus && document.contains(lastFocus)) lastFocus.focus();
+  }
+
+  // ---------- toast ----------
+  const toastEl = $("#toast"); let toastTimer = 0;
+  function toast(msg) { toastEl.textContent = msg; toastEl.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => { toastEl.hidden = true; }, 3200); }
+
+  // ---------- stars ----------
+  function updateStarUI() {
+    $$("[data-star]").forEach(b => {
+      const on = b.dataset.star === "stock" ? stars.stocks.has(b.dataset.id) : stars.pols.has(b.dataset.id);
+      b.setAttribute("aria-pressed", String(on));
+      const lbl = b.querySelector("span");
+      if (b.classList.contains("star-wide") && lbl) lbl.textContent = on ? "Starred · you'll get alerts" : "Star to get alerts";
+    });
+    $("#nav-stocks").textContent = stars.stocks.size;
+    $("#nav-pols").textContent = stars.pols.size;
+    $("#stocks-watching").textContent = stars.stocks.size;
+    $("#pols-watching").textContent = stars.pols.size;
+  }
+  function toggleStar(kind, id) {
+    const set = kind === "stock" ? stars.stocks : stars.pols;
+    const on = !set.has(id);
+    on ? set.add(id) : set.delete(id);
+    saveStars();
+    updateStarUI();
+    if (kind === "stock" && $("#stock-starred").checked) renderStocks();
+    if (kind === "pol" && $("#pol-starred").checked) renderPols();
+    const name = kind === "stock" ? id : byPol[id].title + " " + byPol[id].name;
+    toast(on ? `Starred ${name}. Alerts start from the next daily check.` : `Removed ${name} from your alerts.`);
+  }
+
+  // ---------- events ----------
+  document.addEventListener("click", e => {
+    const star = e.target.closest("[data-star]");
+    if (star) { e.stopPropagation(); toggleStar(star.dataset.star, star.dataset.id); return; }
+    if (e.target.closest("[data-fake-link]")) { e.preventDefault(); toast("In the live app this opens the original filing or post."); return; }
+    if (e.target.closest("[data-close]") || e.target === scrim) { closeDrawer(); return; }
+    const opener = e.target.closest("[data-open]");
+    if (opener) { openDrawer({ kind: opener.dataset.open, id: opener.dataset.id }); return; }
+    const id = e.target.closest("button") && e.target.closest("button").id;
+    if (id === "test-btn") {
+      const b = e.target.closest("button");
+      b.disabled = true; b.lastChild.textContent = "Sending…";
+      setTimeout(() => {
+        state.testSent.push(new Date());
+        renderChat();
+        b.disabled = false; b.lastChild.textContent = "Send test notification";
+        toast("Test notification sent. (Prototype: nothing was actually sent.)");
+      }, 700);
+    } else if (id === "disconnect-btn") {
+      state.connected = false; renderTelegram(); toast("Telegram disconnected. Alerts are paused.");
+    } else if (id === "connect-btn") {
+      state.connected = true; renderTelegram(); toast("Telegram connected.");
+    } else if (id === "logout") {
+      location.hash = "login";
+    } else if (id === "login-btn") {
+      location.hash = "stocks";
+    }
+  });
+  document.addEventListener("keydown", e => {
+    if (e.key === "Escape") closeDrawer();
+    if ((e.key === "Enter" || e.key === " ") && e.target.matches && e.target.matches("[data-open]")) { e.preventDefault(); openDrawer({ kind: e.target.dataset.open, id: e.target.dataset.id }); }
+  });
+  ["#stock-q", "#stock-sector", "#stock-sort", "#stock-starred"].forEach(s => $(s).addEventListener("input", renderStocks));
+  ["#pol-q", "#pol-party", "#pol-state", "#pol-starred"].forEach(s => $(s).addEventListener("input", renderPols));
+  $$('input[name="pol-chamber"]').forEach(r => r.addEventListener("change", renderPols));
+  $$('input[name="alert-filter"]').forEach(r => r.addEventListener("change", renderAlerts));
+  $("#pref-rumors").addEventListener("change", e => {
+    state.rumors = e.target.checked; renderAlerts(); renderChat();
+    toast(state.rumors ? "Unverified forum signals turned on." : "Unverified forum signals turned off.");
+  });
+
+  // ---------- routing ----------
+  const VIEWS = ["login", "stocks", "politicians", "alerts", "settings"];
+  function route() {
+    let v = location.hash.slice(1);
+    if (!VIEWS.includes(v)) v = "stocks";
+    closeDrawer();
+    $$("[data-view]").forEach(s => { s.hidden = s.dataset.view !== v; });
+    $(".topbar").hidden = v === "login";
+    $("#app").hidden = v === "login";
+    $$(".nav a").forEach(a => { if (a.getAttribute("href") === "#" + v) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current"); });
+    window.scrollTo(0, 0);
+  }
+  window.addEventListener("hashchange", route);
+
+  renderStocks();
+  renderPols();
+  renderAlerts();
+  renderTelegram();
+  renderChat();
+  updateStarUI();
+  route();
+})();
+</script>
