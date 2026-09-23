@@ -28,27 +28,57 @@ Community-maintained parsers already exist for the House/Senate PTR data
 (e.g. Senate Stock Watcher / House Stock Watcher projects) — worth evaluating
 as a starting point rather than parsing PDFs from scratch.
 
+### Tier 2: unverified web/forum signals
+
+Regulatory filings are confirmed but lagging (up to 45 days for politicians).
+Chatter on forums, social media, and financial discussion sites sometimes
+surfaces the same trades earlier — but it's rumor, not disclosure. This tier
+is kept explicitly separate so alerts never blur "SEC confirmed this" with
+"someone on a forum claimed this."
+
+Candidate sources for v1 (start narrow, expand later):
+- Reddit (via the official Reddit API, not raw scraping — subreddits like
+  r/wallstreetbets, r/investing, r/SecurityAnalysis)
+- StockTwits (has a public API for ticker-tagged posts)
+- X/Twitter search on cashtags + insider-trading-related keywords (official
+  API is paid; evaluate cost vs. value before committing)
+- Financial news aggregators/RSS for "insider buying/selling" coverage
+
+Practical constraints to design around:
+- **Confidence, not fact:** every item from this tier gets a `confidence:
+  rumor` tag and is never merged into the Tier 1 `Trade` table — it's a
+  separate `RumorSignal` record, cross-referenced by ticker/person where
+  possible.
+- **Signal-to-noise:** raw keyword scraping of the open web is mostly noise.
+  Practical v1 approach is to match forum/social chatter against
+  people/tickers already being watched (from Tier 1 data), not to crawl
+  blindly.
+- **Access method matters:** prefer official APIs (Reddit, StockTwits) over
+  scraping HTML — more stable, less likely to get rate-limited or blocked,
+  and avoids ToS issues.
+
 ## Proposed architecture
 
 ```
                  ┌────────────────────┐
-                 │  Daily batch job     │  (cron / APScheduler, once/day)
+                 │  GitHub Actions      │  scheduled workflow, once/day
+                 │  (cron)              │
                  └─────────┬──────────┘
                            │
-        ┌──────────────────┼──────────────────┐
-        ▼                  ▼                  ▼
- ┌─────────────┐  ┌─────────────┐  ┌─────────────┐
- │ SEC Form 4   │  │ House PTR    │  │ Senate PTR   │   Ingestion
- │ poller       │  │ scraper      │  │ scraper      │   (per-source)
- └──────┬───────┘  └──────┬───────┘  └──────┬───────┘
-        └─────────────────┼─────────────────┘
-                           ▼
+    ┌────────────────┬─────┴────┬────────────────┐
+    ▼                ▼          ▼                ▼
+┌─────────┐  ┌───────────┐ ┌───────────┐ ┌────────────────┐
+│ SEC Form 4│  │ House PTR  │ │ Senate PTR │ │ Web/forum       │  Ingestion
+│ poller    │  │ scraper    │ │ scraper    │ │ scanner (Tier 2)│  (per-source)
+└─────┬────┘  └─────┬─────┘ └─────┬─────┘ └────────┬───────┘
+      └──────────────┼─────────────┼───────────────┘
+                       ▼
                  ┌───────────────────┐
-                 │  Normalizer         │  → common `Trade` schema
+                 │  Normalizer         │  → `Trade` (Tier 1) / `RumorSignal` (Tier 2)
                  └─────────┬──────────┘
                            ▼
                  ┌───────────────────┐
-                 │  Postgres storage   │  trades, entities, rules, users/subscriptions
+                 │  SQLite (in-repo)   │  trades, rumor signals, rules, users
                  └─────────┬──────────┘
                            ▼
                  ┌───────────────────┐
@@ -56,18 +86,19 @@ as a starting point rather than parsing PDFs from scratch.
                  └─────────┬──────────┘
                            ▼
                  ┌───────────────────┐
-                 │  Telegram bot        │  primary notification channel
-                 │  (email/webhook later)│
+                 │  Telegram sendMessage│  one HTTP call per alert, per user
                  └───────────────────┘
                            │
                  ┌───────────────────┐
                  │  API + dashboard    │  browse trades, manage alert rules
+                 │  (later phase)       │
                  └───────────────────┘
 ```
 
-The pipeline runs once a day: pull the day's new filings from all three
-sources, normalize, evaluate signal rules, and push any resulting alerts out
-over Telegram. No streaming/real-time polling for v1 — SEC Form 4 has up to a
+The pipeline runs once a day as a GitHub Actions workflow: pull the day's new
+filings/signals from all sources, normalize, evaluate signal rules, push any
+resulting alerts to Telegram, and commit the updated SQLite state file back
+to the repo. No streaming/real-time polling for v1 — SEC Form 4 has up to a
 2-day disclosure lag and PTRs up to 45 days anyway, so daily batch loses
 essentially no signal freshness while being far simpler to build and run.
 
@@ -80,6 +111,15 @@ transaction_type (buy | sell | option_exercise | gift | ...)
 amount_range (disclosures are often reported as ranges, not exact figures)
 trade_date, filing_date, filing_lag_days
 source (sec_form4 | house_ptr | senate_ptr), source_url
+```
+
+### `RumorSignal` schema (draft, Tier 2)
+
+```
+person_name (if identifiable), ticker (if identifiable)
+platform (reddit | stocktwits | twitter | news), post_url, post_date
+excerpt, matched_watch (which Tier 1 person/ticker this matched against)
+confidence: rumor   # always — never promoted into the Trade table automatically
 ```
 
 ### Users & subscriptions (draft)
@@ -110,15 +150,20 @@ linked manually).
 ## Tech stack (initial choice)
 
 - **Language:** Python
-- **Ingestion/scheduling:** `requests`/`httpx` + a once-daily `APScheduler`/cron
-  job (no need for distributed workers at this scale)
+- **Hosting/scheduling:** GitHub Actions scheduled workflow (`schedule:` cron
+  trigger), once/day. Free (unlimited minutes on a public repo), no new
+  vendor, and the same platform already hosting the code.
+- **Ingestion:** `requests`/`httpx` for Tier 1 (SEC/House/Senate) and Tier 2
+  (Reddit/StockTwits APIs, RSS)
 - **Parsing:** `lxml`/`BeautifulSoup` for HTML/PDF disclosure parsing
-- **Storage:** PostgreSQL
-- **API:** FastAPI
-- **Notifications:** Telegram bot (`python-telegram-bot`), sending one
-  message per alert to each subscribed user's chat. Notification layer stays
-  pluggable so email/Slack/Discord can be added later, but Telegram is the
-  only channel built for v1.
+- **Storage:** SQLite file committed back to the repo by the workflow after
+  each run — keeps state versioned and avoids standing up a hosted database
+  for v1. Swappable for Postgres later if scale/concurrency needs it.
+- **API:** FastAPI (later phase, once there's a dashboard to serve)
+- **Notifications:** Telegram Bot API, called directly over HTTP
+  (`sendMessage` per alert per user) — no persistent bot process needed for
+  v1 since delivery is one-directional. Notification layer stays pluggable
+  so email/Slack/Discord can be added later.
 
 ## Roadmap
 
@@ -130,10 +175,13 @@ linked manually).
       (likely the harder parsing problem)
 - [ ] **Phase 3 — Signal engine v1**: rule-based alerts on the unified trade
       table
-- [ ] **Phase 4 — Telegram notifications**: bot setup, chat linking,
-      per-user alert delivery on the daily batch
-- [ ] **Phase 5 — API + dashboard**: browse trades, manage alerts
-- [ ] **Phase 6 — Anomaly scoring**: move beyond static rules if warranted
+- [ ] **Phase 4 — Telegram notifications**: bot setup, one-time chat_id
+      capture, per-user alert delivery on the daily batch
+- [ ] **Phase 5 — Web/forum signals (Tier 2)**: Reddit/StockTwits ingestion,
+      matched against Tier 1 watched people/tickers, delivered as clearly-
+      marked rumor-tier alerts
+- [ ] **Phase 6 — API + dashboard**: browse trades, manage alerts
+- [ ] **Phase 7 — Anomaly scoring**: move beyond static rules if warranted
 
 ## Decisions
 
@@ -142,12 +190,20 @@ linked manually).
 - **Users:** multi-user data model from day one (users, Telegram chat links,
   per-user alert rules), but only the project owner as an actual user for
   now.
-- **Notifications:** Telegram bot is the v1 delivery channel.
+- **Notifications:** Telegram, delivered via direct API calls from the daily
+  job (no persistent bot process needed for v1's one-directional alerts).
+- **Hosting:** GitHub Actions scheduled workflow + SQLite state committed to
+  the repo. Keeps the stack to two third parties total — GitHub (already in
+  use) and Telegram — with no server to provision or pay for. Revisit if/when
+  interactive bot commands or multi-user self-onboarding need an always-on
+  process (small VPS/Fly.io/Railway at that point).
+- **Signal sources:** three tiers — SEC Form 4, House/Senate PTR (Tier 1,
+  confirmed), and web/forum chatter (Tier 2, unverified) — kept in separate
+  tables so rumor never gets presented as confirmed disclosure.
 
 ## Open questions
 
-- Hosting target (self-hosted, cloud VM, serverless) — affects scheduler
-  choice and how the daily job + Telegram bot get deployed.
-- Telegram bot mode: polling (`getUpdates`) vs. webhook — polling is simpler
-  to run for a single daily job with no server; webhook needs a public HTTPS
-  endpoint but is cleaner if we later want `/commands` handled in real time.
+- Tier 2 source prioritization: start with Reddit + StockTwits (free APIs)
+  and add X/Twitter later once the paid API cost is worth it?
+- At what point (user count, message volume) does GitHub Actions' daily cron
+  stop being sufficient, and what's the trigger to move to an always-on host?
