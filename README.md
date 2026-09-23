@@ -197,14 +197,16 @@ the Railway deployment.
 - **Frontend:** Python-only (FastAPI + HTMX + Tailwind).
 - **Signal tiers:** Tier 1 (Form 4, PTRs) confirmed; Tier 2 (web/forum)
   unverified, stored and labelled separately.
+- **Which trades alert:** buys and sells only. For Form 4 that means
+  open-market purchases and sales (transaction codes `P` and `S`), skipping
+  grants, option exercises, and tax withholding. For PTRs, purchases and
+  sales (full or partial), skipping exchanges.
+- **Alert format:** one Telegram message per trade, no daily digest.
+- **Tier 2 sources:** Reddit and StockTwits only for now. More sources get
+  added once the app is running well and more signal is wanted.
 
 ## Open questions
 
-- **Which Form 4 trades count?** Most Form 4s are routine (stock grants,
-  option exercises, shares withheld for tax). Proposed default: alert only on
-  open-market purchases and sales (transaction codes `P` and `S`), with an
-  option to include everything later.
-- **Alert format:** one Telegram message per trade, or a single daily digest
-  per user (or user's choice)?
-- **Tier 2 sources:** start with Reddit + StockTwits (free) and add X/Twitter
-  later if the paid API is worth it?
+- None blocking Phase 1. Before Phase 5, confirm current API access terms
+  for Reddit and StockTwits, since both have tightened access for new apps
+  in the past.
