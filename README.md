@@ -1,8 +1,21 @@
-# Insider Trading Alerts
+# Behind The Curtain
 
 A web app where users pick the stocks and US politicians they care about, and
 get a Telegram alert whenever one of those company insiders or politicians
 discloses a trade.
+
+## Brand
+
+- **Name:** Behind The Curtain
+- **Palette:** `#000000` · `#2A0048` · `#560072` · `#800080` · `#A90072` ·
+  `#D50048` · `#FF0000` (black → violet → purple → magenta → crimson → red)
+- **Themes:** light and dark, plus "match your device". Users switch themes
+  in the header or under Settings → Appearance.
+- **Semantic colors stay separate from the brand:** buys are green, sells
+  are red, and unverified forum signals are amber, so a trade's direction
+  never depends on the brand palette.
+- **UI prototype:** [`prototype/index.html`](prototype/index.html), a
+  clickable mockup that uses example data.
 
 > **Scope note:** Tier 1 signals come only from legally mandated public
 > disclosures — SEC Form 4 filings and STOCK Act Periodic Transaction

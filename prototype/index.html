@@ -1,92 +1,111 @@
-<title>Insider Alerts Prototype</title>
+<title>Behind The Curtain</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Hanken+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,600;0,6..96,700;1,6..96,500;1,6..96,600&family=Hanken+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <style>
 :root {
-  --bg: #F3F5F8;
+  /* brand palette: black → violet → purple → magenta → crimson → red */
+  --p0: #000000;
+  --p1: #2A0048;
+  --p2: #560072;
+  --p3: #800080;
+  --p4: #A90072;
+  --p5: #D50048;
+  --p6: #FF0000;
+  --brand-gradient: linear-gradient(90deg, var(--p1), var(--p2), var(--p3), var(--p4), var(--p5), var(--p6));
+
+  --bg: #F8F5FA;
   --surface: #FFFFFF;
-  --surface-2: #ECEFF3;
-  --ink: #121720;
-  --ink-2: #3A4352;
-  --muted: #667085;
-  --line: #DDE2E9;
-  --line-strong: #C5CCD6;
-  --star: #C98208;
-  --star-soft: #FBF0DA;
-  --buy: #1B8250;
+  --surface-2: #F2EBF5;
+  --ink: #1B0D26;
+  --ink-2: #47364F;
+  --muted: #76667F;
+  --line: #E8DFEC;
+  --line-strong: #CEBFD7;
+  --accent: #800080;
+  --accent-soft: #F6E7F4;
+  --star: #A90072;
+  --star-soft: #FBE4F0;
+  --buy: #177A4B;
   --buy-soft: #E1F2E8;
-  --sell: #BE3636;
-  --sell-soft: #F8E3E2;
-  --rumor: #6D4FC2;
-  --rumor-soft: #ECE6FA;
+  --sell: #C8161D;
+  --sell-soft: #FCE4E4;
+  --rumor: #946000;
+  --rumor-soft: #FBF0D8;
   --tg: #2AABEE;
   --tg-hover: #1E98D9;
-  --primary: #121720;
+  --primary: #560072;
+  --primary-hover: #800080;
   --primary-ink: #FFFFFF;
-  --focus: #2F6FEB;
-  --chat-bg: #DCE5EC;
+  --focus: #A90072;
+  --chat-bg: #EAE2F0;
   --bubble: #FFFFFF;
-  --scrim: rgba(12, 16, 22, 0.38);
-  --shadow: 0 1px 2px rgba(18, 23, 32, 0.05), 0 12px 32px rgba(18, 23, 32, 0.10);
-  --font-display: "Bricolage Grotesque", "Hanken Grotesk", system-ui, sans-serif;
+  --scrim: rgba(20, 0, 32, 0.42);
+  --shadow: 0 1px 2px rgba(42, 0, 72, 0.06), 0 12px 32px rgba(42, 0, 72, 0.12);
+  --font-display: "Bodoni Moda", Didot, "Bodoni 72", Georgia, serif;
   --font-body: "Hanken Grotesk", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --bg: #0D1016;
-    --surface: #151A22;
-    --surface-2: #1D232D;
-    --ink: #E8ECF2;
-    --ink-2: #C2C9D4;
-    --muted: #8D96A6;
-    --line: #262D38;
-    --line-strong: #37404D;
-    --star: #F2AA3C;
-    --star-soft: #392A10;
-    --buy: #45C287;
-    --buy-soft: #12301F;
-    --sell: #F06C67;
-    --sell-soft: #3B1818;
-    --rumor: #A98CF2;
-    --rumor-soft: #2A2142;
-    --primary: #E8ECF2;
-    --primary-ink: #0D1016;
-    --focus: #6EA0FF;
-    --chat-bg: #0F1823;
-    --bubble: #1C2633;
-    --scrim: rgba(0, 0, 0, 0.55);
-    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 32px rgba(0, 0, 0, 0.45);
+    --bg: #09050E;
+    --surface: #130B1C;
+    --surface-2: #1E1229;
+    --ink: #F3EBF7;
+    --ink-2: #D0C2D9;
+    --muted: #9C8CA8;
+    --line: #2A1B37;
+    --line-strong: #412C52;
+    --accent: #E06AC8;
+    --accent-soft: #321439;
+    --star: #FF4F93;
+    --star-soft: #3F1029;
+    --buy: #45C489;
+    --buy-soft: #0F2E1F;
+    --sell: #FF5B53;
+    --sell-soft: #3C1113;
+    --rumor: #F2B544;
+    --rumor-soft: #35270B;
+    --primary: #A90072;
+    --primary-hover: #D50048;
+    --primary-ink: #FFFFFF;
+    --focus: #FF6FB5;
+    --chat-bg: #10091A;
+    --bubble: #22152F;
+    --scrim: rgba(0, 0, 0, 0.6);
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 32px rgba(0, 0, 0, 0.55);
   }
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --bg: #0D1016;
-  --surface: #151A22;
-  --surface-2: #1D232D;
-  --ink: #E8ECF2;
-  --ink-2: #C2C9D4;
-  --muted: #8D96A6;
-  --line: #262D38;
-  --line-strong: #37404D;
-  --star: #F2AA3C;
-  --star-soft: #392A10;
-  --buy: #45C287;
-  --buy-soft: #12301F;
-  --sell: #F06C67;
-  --sell-soft: #3B1818;
-  --rumor: #A98CF2;
-  --rumor-soft: #2A2142;
-  --primary: #E8ECF2;
-  --primary-ink: #0D1016;
-  --focus: #6EA0FF;
-  --chat-bg: #0F1823;
-  --bubble: #1C2633;
-  --scrim: rgba(0, 0, 0, 0.55);
-  --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 32px rgba(0, 0, 0, 0.45);
+  --bg: #09050E;
+  --surface: #130B1C;
+  --surface-2: #1E1229;
+  --ink: #F3EBF7;
+  --ink-2: #D0C2D9;
+  --muted: #9C8CA8;
+  --line: #2A1B37;
+  --line-strong: #412C52;
+  --accent: #E06AC8;
+  --accent-soft: #321439;
+  --star: #FF4F93;
+  --star-soft: #3F1029;
+  --buy: #45C489;
+  --buy-soft: #0F2E1F;
+  --sell: #FF5B53;
+  --sell-soft: #3C1113;
+  --rumor: #F2B544;
+  --rumor-soft: #35270B;
+  --primary: #A90072;
+  --primary-hover: #D50048;
+  --primary-ink: #FFFFFF;
+  --focus: #FF6FB5;
+  --chat-bg: #10091A;
+  --bubble: #22152F;
+  --scrim: rgba(0, 0, 0, 0.6);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 32px rgba(0, 0, 0, 0.55);
 }
 
 * { box-sizing: border-box; }
@@ -119,6 +138,7 @@ a { color: inherit; }
   -webkit-backdrop-filter: saturate(1.4) blur(10px);
   border-bottom: 1px solid var(--line);
 }
+.topbar::before { content: ""; display: block; height: 3px; background: var(--brand-gradient); }
 .topbar-inner {
   max-width: 1120px;
   margin: 0 auto;
@@ -135,13 +155,22 @@ a { color: inherit; }
   text-decoration: none;
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: 18px;
-  letter-spacing: -0.01em;
+  font-size: 20px;
+  letter-spacing: -0.005em;
   white-space: nowrap;
 }
-.mark-bg { fill: var(--ink); }
-.mark-line { fill: none; stroke: var(--bg); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
-.mark-dot { fill: var(--star); }
+.brand i { font-style: italic; font-weight: 500; color: var(--accent); }
+.logo { width: 30px; height: 30px; flex: none; border-radius: 8px; }
+.icon-btn {
+  width: 36px; height: 36px;
+  display: inline-grid; place-items: center;
+  border: 1px solid var(--line); border-radius: 8px;
+  background: var(--surface); color: var(--ink-2);
+  cursor: pointer; flex: none;
+}
+.icon-btn:hover { color: var(--accent); border-color: var(--line-strong); }
+.icon-btn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.top-right { display: flex; align-items: center; gap: 12px; }
 .nav { display: flex; gap: 4px; flex: 1; }
 .nav a {
   display: inline-flex;
@@ -157,7 +186,7 @@ a { color: inherit; }
   border: 1px solid transparent;
 }
 .nav a:hover { color: var(--ink); background: var(--surface-2); }
-.nav a[aria-current="page"] { color: var(--ink); background: var(--surface); border-color: var(--line); }
+.nav a[aria-current="page"] { color: var(--accent); background: var(--accent-soft); }
 .count {
   font-family: var(--font-mono);
   font-size: 11px;
@@ -206,10 +235,10 @@ a { color: inherit; }
   flex-wrap: wrap;
   margin-bottom: 18px;
 }
-.view-head h1 { font-family: var(--font-display); font-weight: 700; font-size: 30px; letter-spacing: -0.02em; line-height: 1.1; }
+.view-head h1 { font-family: var(--font-display); font-weight: 700; font-size: 36px; letter-spacing: -0.01em; line-height: 1.05; }
 .view-head .sub { color: var(--muted); margin-top: 6px; max-width: 62ch; }
 .stat { display: flex; align-items: baseline; gap: 8px; }
-.stat-n { font-family: var(--font-display); font-weight: 700; font-size: 30px; line-height: 1; font-variant-numeric: tabular-nums; }
+.stat-n { font-family: var(--font-display); font-weight: 700; font-size: 36px; line-height: 1; font-variant-numeric: tabular-nums; color: var(--star); }
 .stat-l { color: var(--muted); font-size: 13px; }
 
 /* ---------- controls ---------- */
@@ -251,7 +280,7 @@ select { padding-right: 8px; cursor: pointer; }
   white-space: nowrap;
 }
 .btn.primary { background: var(--primary); color: var(--primary-ink); }
-.btn.primary:hover { opacity: 0.9; }
+.btn.primary:hover { background: var(--primary-hover); }
 .btn.ghost { background: transparent; border-color: var(--line); color: var(--ink); }
 .btn.ghost:hover { background: var(--surface-2); }
 .btn.tg { background: var(--tg); color: #fff; }
@@ -346,7 +375,7 @@ td.c-sector { color: var(--muted); font-size: 14px; white-space: nowrap; }
 .settings-grid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr); gap: 16px; align-items: start; }
 .stack { display: flex; flex-direction: column; gap: 16px; }
 .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 20px; }
-.panel h2 { font-family: var(--font-display); font-weight: 700; font-size: 19px; letter-spacing: -0.01em; }
+.panel h2 { font-family: var(--font-display); font-weight: 700; font-size: 22px; letter-spacing: -0.005em; }
 .panel .sub { color: var(--muted); font-size: 14px; margin-top: 4px; }
 .tg-account { display: flex; align-items: center; gap: 14px; margin-top: 16px; }
 .tg-account .who { flex: 1; min-width: 0; }
@@ -362,7 +391,7 @@ td.c-sector { color: var(--muted); font-size: 14px; white-space: nowrap; }
 .prefs .d { color: var(--muted); font-size: 14px; margin-top: 2px; }
 .switch { appearance: none; -webkit-appearance: none; width: 40px; height: 24px; border-radius: 12px; background: var(--line-strong); position: relative; cursor: pointer; flex: none; margin: 2px 0 0; transition: background 0.15s; }
 .switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.25); transition: transform 0.15s; }
-.switch:checked { background: var(--buy); }
+.switch:checked { background: var(--primary); }
 .switch:checked::after { transform: translateX(16px); }
 .switch:disabled { opacity: 0.55; cursor: not-allowed; }
 .fine { color: var(--muted); font-size: 13px; }
@@ -373,7 +402,7 @@ td.c-sector { color: var(--muted); font-size: 14px; white-space: nowrap; }
 .preview { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 80px); }
 .tg-chat { margin-top: 14px; background: var(--chat-bg); border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 8px; max-height: 560px; overflow-y: auto; }
 .tg-bothead { display: flex; align-items: center; gap: 10px; padding: 2px 2px 8px; border-bottom: 1px solid color-mix(in srgb, var(--muted) 25%, transparent); margin-bottom: 4px; }
-.tg-bothead .avatar { background: var(--tg); color: #fff; }
+.tg-bothead .logo { width: 32px; height: 32px; border-radius: 50%; }
 .tg-bothead .nm { font-weight: 700; font-size: 14px; }
 .tg-bothead .st { font-size: 12px; color: var(--muted); }
 .bubble { background: var(--bubble); border-radius: 12px 12px 12px 4px; padding: 8px 12px 6px; max-width: 92%; font-size: 14px; line-height: 1.45; box-shadow: 0 1px 1px rgba(0,0,0,.06); }
@@ -417,12 +446,41 @@ td.c-sector { color: var(--muted); font-size: 14px; white-space: nowrap; }
 .trades .who { font-weight: 600; }
 .trades .amt { font-family: var(--font-mono); font-size: 13px; }
 .trades .meta { color: var(--muted); font-size: 13px; display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
-.linkish { background: none; border: 0; padding: 0; color: var(--focus); font-size: 13px; font-weight: 600; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.linkish { background: none; border: 0; padding: 0; color: var(--accent); font-size: 13px; font-weight: 600; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
 
 /* ---------- login ---------- */
-.login { padding-inline: 16px; padding-block: 10vh 64px; display: flex; justify-content: center; }
-.login-card { width: 100%; max-width: 460px; display: flex; flex-direction: column; gap: 18px; }
-.login-card h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(32px, 7vw, 42px); letter-spacing: -0.025em; line-height: 1.05; }
+.login { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); min-height: 100vh; }
+.login-side { padding-inline: 40px; padding-block: 64px; display: flex; align-items: center; justify-content: center; }
+.login-card { width: 100%; max-width: 440px; display: flex; flex-direction: column; gap: 18px; }
+.login-card h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(34px, 6vw, 48px); letter-spacing: -0.015em; line-height: 1.02; }
+.login-card h1 i { font-weight: 500; color: var(--accent); }
+
+/* the stage: a parted velvet curtain in the brand palette (same in both themes) */
+.stage { position: relative; overflow: hidden; background: var(--p0); isolation: isolate; min-height: 260px; }
+.stage::before {
+  content: ""; position: absolute; inset: 0; z-index: -1;
+  background:
+    radial-gradient(ellipse 38% 55% at 50% 38%, rgba(255, 0, 72, 0.30), transparent 70%),
+    radial-gradient(ellipse 22% 10% at 50% 86%, rgba(255, 90, 140, 0.35), transparent 70%),
+    var(--p0);
+}
+.valance { position: absolute; top: 0; left: 0; right: 0; height: 34px; background: var(--brand-gradient); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.55); z-index: 2; }
+.valance::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: -10px; height: 10px;
+  background: radial-gradient(circle at 14px 0, var(--p5) 9px, transparent 9.5px) 0 0 / 28px 10px repeat-x;
+}
+.drape {
+  position: absolute; top: 0; bottom: 0; width: 50%;
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0) 40%, rgba(0, 0, 0, 0.55)),
+    repeating-linear-gradient(90deg, var(--p1) 0, var(--p2) 16px, var(--p3) 26px, var(--p4) 31px, var(--p2) 40px, var(--p1) 52px);
+}
+.drape.l { left: 0; clip-path: polygon(0 0, 100% 0, 88% 22%, 66% 44%, 46% 60%, 38% 74%, 36% 100%, 0 100%); }
+.drape.r { right: 0; clip-path: polygon(0 0, 100% 0, 100% 100%, 64% 100%, 62% 74%, 54% 60%, 34% 44%, 12% 22%); }
+.stage-copy { position: absolute; left: 0; right: 0; bottom: 12%; text-align: center; color: #fff; z-index: 1; padding-inline: 16px; }
+.stage-copy .wm { font-family: var(--font-display); font-weight: 700; font-size: clamp(28px, 4.4vw, 46px); line-height: 1; letter-spacing: -0.01em; text-shadow: 0 2px 24px rgba(213, 0, 72, 0.55); }
+.stage-copy .wm i { font-weight: 500; }
+.stage-copy .tag { margin-top: 10px; font-size: 12px; letter-spacing: 0.22em; text-transform: uppercase; color: rgba(255, 255, 255, 0.72); }
 .login-card .lead { color: var(--ink-2); font-size: 17px; }
 .login-card .btn.tg { height: 48px; font-size: 16px; align-self: flex-start; padding: 0 22px; border-radius: 24px; }
 .how { list-style: none; counter-reset: how; margin: 10px 0 0; padding: 18px 0 0; border-top: 1px solid var(--line); display: grid; gap: 12px; }
@@ -449,7 +507,11 @@ td.c-sector { color: var(--muted); font-size: 14px; white-space: nowrap; }
   .nav { order: 3; flex: 1 0 100%; overflow-x: auto; margin-inline: -16px; padding: 0 16px 8px; }
   .me-text { display: none; }
   .c-sector, .c-act { display: none; }
-  .view-head h1 { font-size: 26px; }
+  .view-head h1 { font-size: 30px; }
+  .brand { font-size: 17px; }
+  .login { grid-template-columns: minmax(0, 1fr); min-height: 0; }
+  .stage { min-height: 240px; }
+  .login-side { padding-inline: 16px; padding-block: 32px 56px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .drawer, .switch, .switch::after { transition: none; }
@@ -460,13 +522,25 @@ td.c-sector { color: var(--muted); font-size: 14px; white-space: nowrap; }
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 3.6l2.55 5.2 5.75.84-4.16 4.05.98 5.72L12 16.7l-5.12 2.7.98-5.72L3.7 9.64l5.75-.84z"/></symbol>
   <symbol id="i-send" viewBox="0 0 24 24"><path d="M20.7 3.3c.5-.2 1 .3.8.8l-6.3 16.6c-.2.6-1.1.6-1.3 0l-2.4-6.2-6.2-2.4c-.6-.2-.6-1.1 0-1.3z"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.6A8.2 8.2 0 0 1 9.4 4 8.2 8.2 0 1 0 20 14.6z"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></symbol>
+  <linearGradient id="btc-drape" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#800080"/><stop offset=".55" stop-color="#A90072"/><stop offset="1" stop-color="#D50048"/></linearGradient>
+  <linearGradient id="btc-valance" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#560072"/><stop offset=".55" stop-color="#D50048"/><stop offset="1" stop-color="#FF0000"/></linearGradient>
+  <symbol id="i-logo" viewBox="0 0 32 32">
+    <rect width="32" height="32" rx="8" fill="#12001E"/>
+    <ellipse cx="16" cy="25.2" rx="5.2" ry="1.7" fill="#FF2E6A" opacity=".55"/>
+    <path d="M4.5 6.5h11.2c-.7 6.6-2.8 13.4-7.3 20.5H4.5z" fill="url(#btc-drape)"/>
+    <path d="M27.5 6.5H16.3c.7 6.6 2.8 13.4 7.3 20.5h3.9z" fill="url(#btc-drape)"/>
+    <path d="M9.6 7.5c-.5 6.3-1.9 12.4-4.3 18.6M22.4 7.5c.5 6.3 1.9 12.4 4.3 18.6" stroke="#2A0048" stroke-opacity=".55" stroke-width=".9" fill="none"/>
+    <rect x="3.5" y="4" width="25" height="3.6" rx="1.3" fill="url(#btc-valance)"/>
+  </symbol>
 </svg>
 
 <header class="topbar">
   <div class="topbar-inner">
-    <a class="brand" href="#stocks">
-      <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><rect class="mark-bg" width="28" height="28" rx="7"/><path class="mark-line" d="M6.5 18.5l5-5 4 3 5-6"/><circle class="mark-dot" cx="21.2" cy="9.3" r="2.6"/></svg>
-      Insider Alerts
+    <a class="brand" href="#stocks" aria-label="Behind The Curtain home">
+      <svg class="logo" aria-hidden="true"><use href="#i-logo"/></svg>
+      <span><i>Behind The</i> Curtain</span>
     </a>
     <nav class="nav" aria-label="Sections">
       <a href="#stocks">Stocks <span class="count" id="nav-stocks">0</span></a>
@@ -474,10 +548,13 @@ td.c-sector { color: var(--muted); font-size: 14px; white-space: nowrap; }
       <a href="#alerts">Alerts</a>
       <a href="#settings">Settings</a>
     </nav>
-    <a class="me" href="#settings" aria-label="Account and Telegram settings">
-      <span class="avatar sm">U</span>
-      <span class="me-text"><span class="me-name">Umer</span><span class="me-status"><i class="dot" id="me-dot"></i><span id="me-status">Telegram connected</span></span></span>
-    </a>
+    <div class="top-right">
+      <button type="button" class="icon-btn" id="theme-btn" aria-label="Switch to dark theme"><svg aria-hidden="true"><use href="#i-moon"/></svg></button>
+      <a class="me" href="#settings" aria-label="Account and Telegram settings">
+        <span class="avatar sm">U</span>
+        <span class="me-text"><span class="me-name">Umer</span><span class="me-status"><i class="dot" id="me-dot"></i><span id="me-status">Telegram connected</span></span></span>
+      </a>
+    </div>
   </div>
 </header>
 
@@ -618,12 +695,24 @@ td.c-sector { color: var(--muted); font-size: 14px; white-space: nowrap; }
           </dl>
           <div class="btn-row"><button class="btn ghost" id="logout" type="button">Log out</button></div>
         </section>
+        <section class="panel" aria-labelledby="look-h">
+          <h2 id="look-h">Appearance</h2>
+          <p class="sub">Light, dark, or match your device.</p>
+          <div class="btn-row">
+            <fieldset class="seg">
+              <legend>Theme</legend>
+              <input type="radio" name="theme" id="th-system" value="system" checked><label for="th-system">System</label>
+              <input type="radio" name="theme" id="th-light" value="light"><label for="th-light">Light</label>
+              <input type="radio" name="theme" id="th-dark" value="dark"><label for="th-dark">Dark</label>
+            </fieldset>
+          </div>
+        </section>
       </div>
       <section class="panel preview" aria-labelledby="pv-h">
         <h2 id="pv-h">Message preview</h2>
         <p class="sub">What alerts look like in your Telegram chat with the bot.</p>
         <div class="tg-chat" id="tg-chat">
-          <div class="tg-bothead"><span class="avatar sm">IA</span><div><div class="nm">Insider Alerts</div><div class="st">bot</div></div></div>
+          <div class="tg-bothead"><svg class="logo" aria-hidden="true"><use href="#i-logo"/></svg><div><div class="nm">Behind The Curtain</div><div class="st">bot</div></div></div>
         </div>
       </section>
     </div>
@@ -632,12 +721,18 @@ td.c-sector { color: var(--muted); font-size: 14px; white-space: nowrap; }
 
 <!-- LOGIN -->
 <section data-view="login" class="login" aria-labelledby="login-h" hidden>
+  <div class="stage">
+    <div class="drape l" aria-hidden="true"></div>
+    <div class="drape r" aria-hidden="true"></div>
+    <div class="valance" aria-hidden="true"></div>
+    <div class="stage-copy">
+      <div class="wm"><i>Behind The</i> Curtain</div>
+      <div class="tag">Insider &amp; Congress trade alerts</div>
+    </div>
+  </div>
+  <div class="login-side">
   <div class="login-card">
-    <span class="brand">
-      <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><rect class="mark-bg" width="28" height="28" rx="7"/><path class="mark-line" d="M6.5 18.5l5-5 4 3 5-6"/><circle class="mark-dot" cx="21.2" cy="9.3" r="2.6"/></svg>
-      Insider Alerts
-    </span>
-    <h1 id="login-h">Know when insiders and politicians trade.</h1>
+    <h1 id="login-h">See who's trading <i>behind the curtain.</i></h1>
     <p class="lead">Star the S&amp;P 500 companies and members of Congress you follow. When one of them discloses a buy or sell, you get a Telegram message.</p>
     <button class="btn tg" id="login-btn" type="button"><svg aria-hidden="true"><use href="#i-send"/></svg>Log in with Telegram</button>
     <p class="fine">Logging in with Telegram also lets our bot message you. There's no password and no email.</p>
@@ -647,6 +742,7 @@ td.c-sector { color: var(--muted); font-size: 14px; white-space: nowrap; }
       <li>Every buy or sell from someone you starred arrives as its own Telegram message.</li>
     </ol>
     <p class="fine">Prototype: the button skips the real Telegram login.</p>
+  </div>
   </div>
 </section>
 
@@ -985,7 +1081,7 @@ td.c-sector { color: var(--muted); font-size: 14px; white-space: nowrap; }
     const examples = [alerts.find(a => a.kind === "insider"), alerts.find(a => a.kind === "politician"), state.rumors ? alerts.find(a => a.kind === "rumor") : null]
       .filter(Boolean).sort((a, b) => a.sent - b.sent);
     const html = examples.map(a => `<div class="bubble">${messageHTML(a)}<span class="tm">${fmtDate(a.sent)}, ${fmtTime(a.sent)}</span></div>`)
-      .concat(state.testSent.map((d, i) => `<div class="bubble${i === state.testSent.length - 1 ? " fresh" : ""}"><span class="ln"><b>Test alert</b></span><span class="ln">Your Insider Alerts connection works. Alerts for your starred companies and politicians will arrive here.</span><span class="tm">${fmtTime(d)}</span></div>`));
+      .concat(state.testSent.map((d, i) => `<div class="bubble${i === state.testSent.length - 1 ? " fresh" : ""}"><span class="ln"><b>Test alert</b></span><span class="ln">Your Behind The Curtain connection works. Alerts for your starred companies and politicians will arrive here.</span><span class="tm">${fmtTime(d)}</span></div>`));
     chat.insertAdjacentHTML("beforeend", html.join(""));
     chat.scrollTop = chat.scrollHeight;
   }
@@ -997,7 +1093,7 @@ td.c-sector { color: var(--muted); font-size: 14px; white-space: nowrap; }
       box.innerHTML = `<div class="tg-account"><span class="avatar lg">U</span>
           <div class="who"><div class="nm">Umer</div><div class="hd">@umer</div></div>
           <span class="pill ok">Connected</span></div>
-        <p class="tg-help">Alerts go to your private chat with the Insider Alerts bot.</p>
+        <p class="tg-help">Alerts go to your private chat with the Behind The Curtain bot.</p>
         <div class="btn-row">
           <button type="button" class="btn primary" id="test-btn"><svg width="16" height="16" aria-hidden="true" style="fill:currentColor"><use href="#i-send"/></svg>Send test notification</button>
           <button type="button" class="btn ghost" id="disconnect-btn">Disconnect</button>
@@ -1127,6 +1223,33 @@ td.c-sector { color: var(--muted); font-size: 14px; white-space: nowrap; }
     state.rumors = e.target.checked; renderAlerts(); renderChat();
     toast(state.rumors ? "Unverified forum signals turned on." : "Unverified forum signals turned off.");
   });
+
+  // ---------- theme: system / light / dark ----------
+  const THEME_KEY = "btc-theme";
+  const root = document.documentElement;
+  const hostTheme = root.getAttribute("data-theme");
+  const darkMq = window.matchMedia("(prefers-color-scheme: dark)");
+  let themeMode = "system";
+  try { const t = localStorage.getItem(THEME_KEY); if (t === "light" || t === "dark" || t === "system") themeMode = t; } catch (e) { /* ignore */ }
+  const effectiveTheme = () => themeMode !== "system" ? themeMode : (hostTheme || (darkMq.matches ? "dark" : "light"));
+  function applyTheme() {
+    if (themeMode === "system") { if (hostTheme) root.setAttribute("data-theme", hostTheme); else root.removeAttribute("data-theme"); }
+    else root.setAttribute("data-theme", themeMode);
+    const dark = effectiveTheme() === "dark";
+    const btn = $("#theme-btn");
+    btn.setAttribute("aria-label", dark ? "Switch to light theme" : "Switch to dark theme");
+    btn.querySelector("use").setAttribute("href", dark ? "#i-sun" : "#i-moon");
+    const radio = $("#th-" + themeMode); if (radio) radio.checked = true;
+  }
+  function setTheme(mode) {
+    themeMode = mode;
+    try { localStorage.setItem(THEME_KEY, mode); } catch (e) { /* ignore */ }
+    applyTheme();
+  }
+  $("#theme-btn").addEventListener("click", () => setTheme(effectiveTheme() === "dark" ? "light" : "dark"));
+  $$('input[name="theme"]').forEach(r => r.addEventListener("change", () => setTheme(r.value)));
+  darkMq.addEventListener("change", applyTheme);
+  applyTheme();
 
   // ---------- routing ----------
   const VIEWS = ["login", "stocks", "politicians", "alerts", "settings"];
