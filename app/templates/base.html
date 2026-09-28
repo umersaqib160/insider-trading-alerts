@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>{% block title %}Behind The Curtain{% endblock %}</title>
+  <link rel="icon" href="/static/img/logo.svg" type="image/svg+xml">
+  <script>try{var t=localStorage.getItem("btc-theme");if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,600;0,6..96,700;1,6..96,500;1,6..96,600&family=Hanken+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="/static/css/app.css">
+  <script src="/static/js/htmx.min.js" defer></script>
+  <script src="/static/js/app.js" defer></script>
+</head>
+<body>
+{% include "_icons.html" %}
+{% block body %}
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="/stocks" aria-label="Behind The Curtain home">
+      <svg class="logo" aria-hidden="true"><use href="#i-logo"/></svg>
+      <span><i>Behind The</i> Curtain</span>
+    </a>
+    <nav class="nav" aria-label="Sections">
+      <a href="/stocks" {% if active == "stocks" %}aria-current="page"{% endif %}>Stocks <span class="count" id="nav-stocks">{{ counts.stocks }}</span></a>
+      <a href="/politicians" {% if active == "politicians" %}aria-current="page"{% endif %}>Politicians <span class="count" id="nav-politicians">{{ counts.politicians }}</span></a>
+      <a href="/alerts" {% if active == "alerts" %}aria-current="page"{% endif %}>Alerts</a>
+      <a href="/settings" {% if active == "settings" %}aria-current="page"{% endif %}>Settings</a>
+    </nav>
+    <div class="top-right">
+      <button type="button" class="icon-btn" id="theme-btn" aria-label="Switch to dark theme"><svg aria-hidden="true"><use href="#i-moon"/></svg></button>
+      <a class="me" href="/settings" aria-label="Account and Telegram settings">
+        {% if user.photo_url %}<img class="avatar sm" src="{{ user.photo_url }}" alt="">{% else %}<span class="avatar sm">{{ user.initials }}</span>{% endif %}
+        <span class="me-text">
+          <span class="me-name">{{ user.display_name }}</span>
+          {% include "_me_status.html" %}
+        </span>
+      </a>
+    </div>
+  </div>
+</header>
+<main class="wrap">
+  {% block content %}{% endblock %}
+</main>
+{% endblock %}
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+</body>
+</html>

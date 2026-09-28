@@ -1,0 +1,41 @@
+{% from "_macros.html" import star_button %}
+{% if total == 0 %}
+<div class="empty-state">
+  <h2>No companies loaded yet</h2>
+  <p>The S&amp;P 500 list hasn't been imported. Run <code>python -m app.cli load-refdata</code> to load companies and members of Congress.</p>
+</div>
+{% else %}
+<p class="results-meta">Showing {{ companies|length }} of {{ total }}</p>
+<div class="table-wrap">
+  <table>
+    <thead><tr>
+      <th class="c-star"><span class="sr">Star</span></th>
+      <th>Ticker</th>
+      <th>Company</th>
+      <th class="c-sector">Sector</th>
+      <th class="c-sub">Industry</th>
+    </tr></thead>
+    <tbody>
+    {% for c in companies %}
+      <tr>
+        <td class="c-star">{{ star_button("company", c.ticker, c.ticker, c.id in starred_ids) }}</td>
+        <td class="tick">{{ c.ticker }}</td>
+        <td class="c-co">{{ c.name }}</td>
+        <td class="c-sector">{{ c.sector }}</td>
+        <td class="c-sub">{{ c.sub_industry }}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="5" class="empty">
+        {%- if filters.starred and not starred_ids -%}
+        You haven't starred any companies yet. Star one to get alerts when its insiders trade.
+        {%- elif filters.q -%}
+        No companies match “{{ filters.q }}”.
+        {%- else -%}
+        No companies match these filters.
+        {%- endif -%}
+      </td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}

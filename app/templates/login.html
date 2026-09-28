@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Log in · Behind The Curtain{% endblock %}
+{% block body %}
+<main class="login">
+  <div class="stage">
+    <div class="drape l" aria-hidden="true"></div>
+    <div class="drape r" aria-hidden="true"></div>
+    <div class="valance" aria-hidden="true"></div>
+    <div class="stage-copy">
+      <div class="wm"><i>Behind The</i> Curtain</div>
+      <div class="tag">Insider &amp; Congress trade alerts</div>
+    </div>
+  </div>
+  <div class="login-side">
+    <div class="login-card">
+      <h1>See who's trading <i>behind the curtain.</i></h1>
+      <p class="lead">Star the S&amp;P 500 companies and members of Congress you follow. When one of them discloses a buy or sell, you get a Telegram message.</p>
+      {% if error %}<p class="notice error" role="alert">{{ error }}</p>{% endif %}
+      <div class="login-actions">
+        {% if bot_username %}
+        <script async src="https://telegram.org/js/telegram-widget.js?22"
+          data-telegram-login="{{ bot_username }}" data-size="large" data-radius="24"
+          data-auth-url="{{ auth_url }}" data-request-access="write"></script>
+        {% endif %}
+        {% if dev_login %}
+        <form method="post" action="/auth/dev-login"><button class="btn primary" type="submit">Dev login (local only)</button></form>
+        {% endif %}
+        {% if not bot_username and not dev_login %}
+        <p class="notice">Telegram login isn't set up yet. Set <code>TELEGRAM_BOT_TOKEN</code> and <code>TELEGRAM_BOT_USERNAME</code>, then register this site's domain with @BotFather using <code>/setdomain</code>.</p>
+        {% endif %}
+      </div>
+      <p class="fine">Logging in with Telegram also lets our bot message you. There's no password and no email.</p>
+      <ol class="how">
+        <li>Star the companies and politicians you care about.</li>
+        <li>Each morning we check new SEC Form 4 filings and congressional trade disclosures.</li>
+        <li>Every buy or sell from someone you starred arrives as its own Telegram message.</li>
+      </ol>
+    </div>
+  </div>
+</main>
+{% endblock %}

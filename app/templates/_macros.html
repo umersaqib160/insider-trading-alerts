@@ -1,0 +1,4 @@
+{% macro star_button(kind, key, label, on) -%}
+<button type="button" class="star" hx-post="/watch/{{ kind }}/{{ key|urlencode }}" hx-swap="outerHTML" hx-disabled-elt="this"
+  aria-pressed="{{ 'true' if on else 'false' }}" aria-label="{{ 'Unstar' if on else 'Star' }} {{ label }}"><svg aria-hidden="true"><use href="#i-star"/></svg></button>
+{%- endmacro %}

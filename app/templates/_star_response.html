@@ -1,0 +1,9 @@
+{% from "_macros.html" import star_button %}
+{{ star_button(kind, key, label, on) }}
+<span class="count" id="nav-stocks" hx-swap-oob="true">{{ counts.stocks }}</span>
+<span class="count" id="nav-politicians" hx-swap-oob="true">{{ counts.politicians }}</span>
+{% if kind == "company" %}
+<span class="stat-n" id="watching-stocks" hx-swap-oob="true">{{ counts.stocks }}</span>
+{% else %}
+<span class="stat-n" id="watching-politicians" hx-swap-oob="true">{{ counts.politicians }}</span>
+{% endif %}

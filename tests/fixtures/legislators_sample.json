@@ -1,0 +1,30 @@
+[
+  {
+    "id": {"bioguide": "C000127"},
+    "name": {"first": "Maria", "last": "Cantwell", "official_full": "Maria Cantwell"},
+    "terms": [
+      {"type": "rep", "state": "WA", "district": 1, "party": "Democrat"},
+      {"type": "sen", "state": "WA", "party": "Democrat"}
+    ]
+  },
+  {
+    "id": {"bioguide": "B001236"},
+    "name": {"first": "John", "last": "Boozman", "official_full": "John Boozman"},
+    "terms": [{"type": "sen", "state": "AR", "party": "Republican"}]
+  },
+  {
+    "id": {"bioguide": "S000033"},
+    "name": {"first": "Bernard", "last": "Sanders", "official_full": "Bernard Sanders"},
+    "terms": [{"type": "sen", "state": "VT", "party": "Independent"}]
+  },
+  {
+    "id": {"bioguide": "Z000017"},
+    "name": {"first": "Lee", "last": "Zeldin"},
+    "terms": [{"type": "rep", "state": "NY", "district": 0, "party": "Republican"}]
+  },
+  {
+    "id": {},
+    "name": {"first": "No", "last": "Bioguide"},
+    "terms": [{"type": "rep", "state": "NY", "district": 3, "party": "Republican"}]
+  }
+]

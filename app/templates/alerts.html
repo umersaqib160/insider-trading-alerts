@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Alerts · Behind The Curtain{% endblock %}
+{% block content %}
+<div class="view-head">
+  <div>
+    <h1>Alerts</h1>
+    <p class="sub">Every alert sent to your Telegram, newest first.</p>
+  </div>
+</div>
+<div class="empty-state">
+  <h2>No alerts yet</h2>
+  <p>Filings are checked once a day. When a company or politician you've starred files a buy or sell, the alert lands in Telegram and shows up here.</p>
+  <div class="btn-row">
+    <a class="btn primary" href="/stocks">Star companies</a>
+    <a class="btn ghost" href="/politicians">Star politicians</a>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Settings · Behind The Curtain{% endblock %}
+{% block content %}
+<div class="view-head">
+  <div>
+    <h1>Settings</h1>
+    <p class="sub">Your Telegram connection and what you get alerted about.</p>
+  </div>
+</div>
+<div class="settings-grid">
+  <div class="stack">
+    <section class="panel" aria-labelledby="tg-h">
+      <h2 id="tg-h">Telegram</h2>
+      <div id="telegram-state">{% include "_telegram_state.html" %}</div>
+    </section>
+
+    <section class="panel" aria-labelledby="pref-h">
+      <h2 id="pref-h">What you get alerted about</h2>
+      <p class="sub">Applies to every company and politician you star.</p>
+      <ul class="prefs">
+        <li>
+          <div class="txt"><div class="t">Buys <span class="pill buy">Buy</span></div><p class="d">Open-market purchases by company insiders (Form 4 code P) and purchases disclosed by politicians.</p></div>
+          <input type="checkbox" class="switch" id="pref-buys" role="switch" checked disabled aria-label="Buys (always on)">
+        </li>
+        <li>
+          <div class="txt"><div class="t">Sells <span class="pill sell">Sell</span></div><p class="d">Open-market sales by company insiders (Form 4 code S) and full or partial sales disclosed by politicians.</p></div>
+          <input type="checkbox" class="switch" id="pref-sells" role="switch" checked disabled aria-label="Sells (always on)">
+        </li>
+        <li>
+          <div class="txt">
+            <div class="t">Unverified forum signals <span class="pill rumor">Unverified</span> <span class="pill neutral">Not live yet</span></div>
+            <p class="d">Reddit and StockTwits posts that mention your starred stocks or politicians. These are claims, not filings, and are always labelled that way.</p>
+          </div>
+          <input type="checkbox" class="switch" id="pref-unverified" name="enabled" role="switch" aria-label="Unverified forum signals"
+            {% if user.include_unverified %}checked{% endif %} hx-post="/settings/unverified" hx-trigger="change" hx-swap="none">
+        </li>
+      </ul>
+      <p class="fine">Stock grants, option exercises and shares withheld for tax are skipped. Buys and sells can't be turned off yet.</p>
+    </section>
+
+    <section class="panel" aria-labelledby="del-h">
+      <h2 id="del-h">Delivery and account</h2>
+      <dl class="dl">
+        <dt>Format</dt><dd>One Telegram message per trade</dd>
+        <dt>Schedule</dt><dd>Filings checked once a day, each morning (US Eastern)</dd>
+        <dt>Sign-in</dt><dd>Telegram</dd>
+      </dl>
+      <form class="btn-row" method="post" action="/logout"><button class="btn ghost" type="submit">Log out</button></form>
+    </section>
+
+    <section class="panel" aria-labelledby="look-h">
+      <h2 id="look-h">Appearance</h2>
+      <p class="sub">Light, dark, or match your device. Saved on this device.</p>
+      <div class="btn-row">
+        <fieldset class="seg">
+          <legend>Theme</legend>
+          <input type="radio" name="theme" id="th-system" value="system" checked><label for="th-system">System</label>
+          <input type="radio" name="theme" id="th-light" value="light"><label for="th-light">Light</label>
+          <input type="radio" name="theme" id="th-dark" value="dark"><label for="th-dark">Dark</label>
+        </fieldset>
+      </div>
+    </section>
+  </div>
+
+  <section class="panel preview" aria-labelledby="pv-h">
+    <h2 id="pv-h">Test message</h2>
+    <p class="sub">What “Send test notification” delivers to your Telegram chat with the bot.</p>
+    <div class="tg-chat">
+      <div class="tg-bothead"><svg class="logo" aria-hidden="true"><use href="#i-logo"/></svg><div><div class="nm">Behind The Curtain</div><div class="st">bot</div></div></div>
+      <div class="bubble">{{ test_message|replace("\n", "<br>")|safe }}</div>
+    </div>
+  </section>
+</div>
+{% endblock %}

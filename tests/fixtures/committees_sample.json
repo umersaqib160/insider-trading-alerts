@@ -1,0 +1,7 @@
+[
+  {"type": "senate", "name": "Senate Committee on Agriculture, Nutrition, and Forestry", "thomas_id": "SSAF"},
+  {"type": "senate", "name": "Senate Committee on the Budget", "thomas_id": "SSBU"},
+  {"type": "senate", "name": "Senate Select Committee on Intelligence", "thomas_id": "SLIN"},
+  {"type": "house", "name": "House Permanent Select Committee on Intelligence", "thomas_id": "HLIG"},
+  {"type": "joint", "name": "Joint Economic Committee", "thomas_id": "JSEC"}
+]

@@ -1,0 +1,6 @@
+Symbol,Security,GICS Sector,GICS Sub-Industry,Headquarters Location,Date added,CIK,Founded
+AAPL,Apple Inc.,Information Technology,"Technology Hardware, Storage & Peripherals","Cupertino, California",1982-11-30,320193,1977
+BRK.B,Berkshire Hathaway,Financials,Multi-Sector Holdings,"Omaha, Nebraska",2010-02-16,1067983,1839
+NVDA,Nvidia,Information Technology,Semiconductors,"Santa Clara, California",2001-11-30,1045810,1993
+XYZ,No CIK Corp,Industrials,Widgets,"Nowhere, Kansas",2020-01-01,,2000
+,Missing Ticker,Energy,Oil,"Houston, Texas",2020-01-01,123,2000

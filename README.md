@@ -26,7 +26,46 @@ discloses a trade.
 
 ## Status
 
-📋 **Planning stage.** No code yet — this README is the working plan.
+**Phases 1–2 are built:** Telegram login, test notifications, the S&P 500
+and Congress lists, and starring. Next is Phase 3, daily SEC Form 4
+ingestion and alerts. Deployment to Railway is waiting on the bot token and
+a Railway account.
+
+## Running locally
+
+```bash
+python3 -m venv .venv
+.venv/bin/pip install -r requirements-dev.txt
+cp .env.example .env                  # DEV_LOGIN=true is already set
+.venv/bin/alembic upgrade head        # creates dev.db (SQLite)
+.venv/bin/python -m app.cli load-refdata   # S&P 500 + Congress members
+.venv/bin/uvicorn app.main:app --reload
+```
+
+Open http://127.0.0.1:8000 and use **Dev login**. Telegram's login widget
+only works on the domain registered with @BotFather, so it can't run on
+localhost. To get real test notifications locally, set `TELEGRAM_BOT_TOKEN`
+and set `DEV_TELEGRAM_ID` to your own Telegram user id. First press Start in
+your chat with the bot, or Telegram won't let the bot message you.
+
+Run the tests with `.venv/bin/pytest`.
+
+## Deploying to Railway
+
+1. Create a Railway project from this GitHub repo and add a **Postgres**
+   database to it. Railway sets `DATABASE_URL` for you.
+2. Set these variables on the web service:
+   - `APP_ENV=production`
+   - `SECRET_KEY`: a long random string, e.g. from `python -c "import secrets; print(secrets.token_urlsafe(48))"`
+   - `TELEGRAM_BOT_TOKEN` and `TELEGRAM_BOT_USERNAME` (without the `@`)
+3. Deploy. The `Procfile` runs database migrations, then starts the app.
+   `/healthz` is the health check.
+4. Generate a public domain for the service. In @BotFather, send
+   `/setdomain`, pick the bot, and enter that domain so the login widget
+   works there.
+5. Load the reference data once from a Railway shell:
+   `python -m app.cli load-refdata`. The daily job will refresh it
+   automatically from Phase 3 on.
 
 ## Product overview
 
@@ -179,10 +218,11 @@ the Railway deployment.
 ## Roadmap
 
 - [x] **Phase 0 — Planning**
-- [ ] **Phase 1 — Foundation:** FastAPI skeleton, Postgres schema, Railway
-      deploy, Telegram login, "send test notification". Proves the full
-      path to your phone before any data work.
-- [ ] **Phase 2 — Reference data + watchlists:** load S&P 500 and Congress
+- [x] **Phase 1 — Foundation:** FastAPI skeleton, Postgres schema, Railway
+      deploy config, Telegram login, "send test notification". Proves the
+      full path to your phone before any data work. *(First Railway deploy
+      still pending.)*
+- [x] **Phase 2 — Reference data + watchlists:** load S&P 500 and Congress
       lists; Stocks and Politicians pages with search, filters, star/unstar.
 - [ ] **Phase 3 — SEC Form 4 alerts:** daily ingestion, match against starred
       companies, send alerts, alert history page.

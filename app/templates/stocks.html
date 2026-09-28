@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Stocks · Behind The Curtain{% endblock %}
+{% block content %}
+<div class="view-head">
+  <div>
+    <h1>Stocks</h1>
+    <p class="sub">S&amp;P 500 · {{ total }} companies. Star a company to get a Telegram alert whenever one of its insiders files a buy or sell on SEC Form 4.</p>
+  </div>
+  <div class="stat"><span class="stat-n" id="watching-stocks">{{ counts.stocks }}</span><span class="stat-l">watching</span></div>
+</div>
+
+<form class="toolbar" action="/stocks" method="get" role="search"
+  hx-get="/stocks/rows" hx-target="#stock-results" hx-trigger="input delay:250ms, submit" hx-sync="this:replace">
+  <label class="search">
+    <svg aria-hidden="true"><use href="#i-search"/></svg>
+    <input class="input" name="q" type="search" value="{{ filters.q }}" placeholder="Search ticker or company" autocomplete="off" aria-label="Search stocks">
+  </label>
+  <select name="sector" aria-label="Filter by sector">
+    <option value="">All sectors</option>
+    {% for s in sectors %}<option value="{{ s }}" {% if s == filters.sector %}selected{% endif %}>{{ s }}</option>{% endfor %}
+  </select>
+  <label class="check"><input type="checkbox" name="starred" value="1" {% if filters.starred %}checked{% endif %}> Starred only</label>
+</form>
+
+<div id="stock-results">{% include "_stock_rows.html" %}</div>
+<p class="foot">Insider buys and sells will show next to each company once daily filing checks are running.</p>
+{% endblock %}

@@ -1,0 +1,30 @@
+<div class="tg-account">
+  {% if user.photo_url %}<img class="avatar lg" src="{{ user.photo_url }}" alt="">{% else %}<span class="avatar lg" aria-hidden="true">{{ user.initials }}</span>{% endif %}
+  <div class="who">
+    <div class="nm">{{ user.display_name }}</div>
+    <div class="hd">{% if user.username %}@{{ user.username }}{% else %}Telegram ID {{ user.telegram_id }}{% endif %}</div>
+  </div>
+  {% if user.telegram_status == "connected" %}<span class="pill ok">Connected</span>
+  {% elif user.telegram_status == "blocked" %}<span class="pill sell">Bot blocked</span>
+  {% else %}<span class="pill neutral">Not connected</span>{% endif %}
+</div>
+{% if user.telegram_status == "connected" %}
+<p class="tg-help">Alerts go to your private chat with the Behind The Curtain bot.</p>
+<div class="btn-row">
+  <button type="button" class="btn primary" hx-post="/settings/test-notification" hx-target="#telegram-state" hx-disabled-elt="this">
+    <svg aria-hidden="true"><use href="#i-send"/></svg>Send test notification
+  </button>
+  <button type="button" class="btn ghost" hx-post="/settings/telegram/disconnect" hx-target="#telegram-state">Disconnect</button>
+</div>
+{% elif user.telegram_status == "blocked" %}
+<p class="tg-help">Telegram says the bot is blocked, so alerts can't be delivered. Unblock the bot in Telegram, then reconnect.</p>
+<div class="btn-row">
+  <button type="button" class="btn tg" hx-post="/settings/telegram/connect" hx-target="#telegram-state"><svg aria-hidden="true"><use href="#i-send"/></svg>Reconnect</button>
+</div>
+{% else %}
+<p class="tg-help">Alerts are paused until you reconnect. Your starred companies and politicians are kept.</p>
+<div class="btn-row">
+  <button type="button" class="btn tg" hx-post="/settings/telegram/connect" hx-target="#telegram-state"><svg aria-hidden="true"><use href="#i-send"/></svg>Connect Telegram</button>
+</div>
+{% endif %}
+{% if oob %}{% include "_me_status.html" %}{% endif %}

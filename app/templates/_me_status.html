@@ -1,0 +1,9 @@
+<span class="me-status" id="me-status"{% if oob %} hx-swap-oob="true"{% endif %}>
+  {%- if user.telegram_status == "connected" -%}
+  <i class="dot"></i>Telegram connected
+  {%- elif user.telegram_status == "blocked" -%}
+  <i class="dot warn"></i>Bot blocked in Telegram
+  {%- else -%}
+  <i class="dot off"></i>Telegram not connected
+  {%- endif -%}
+</span>

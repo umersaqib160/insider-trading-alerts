@@ -1,0 +1,18 @@
+{
+  "SSAF": [
+    {"name": "John Boozman", "party": "majority", "rank": 1, "title": "Chairman", "bioguide": "B001236"},
+    {"name": "Maria Cantwell", "party": "minority", "rank": 2, "bioguide": "C000127"}
+  ],
+  "SSAF13": [
+    {"name": "John Boozman", "party": "majority", "rank": 1, "bioguide": "B001236"}
+  ],
+  "SSBU": [
+    {"name": "Bernard Sanders", "party": "minority", "rank": 1, "bioguide": "S000033"}
+  ],
+  "SLIN": [
+    {"name": "Maria Cantwell", "party": "minority", "rank": 3, "bioguide": "C000127"}
+  ],
+  "JSEC": [
+    {"name": "Lee Zeldin", "party": "majority", "rank": 4, "bioguide": "Z000017"}
+  ]
+}

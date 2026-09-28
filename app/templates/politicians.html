@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Politicians · Behind The Curtain{% endblock %}
+{% block content %}
+<div class="view-head">
+  <div>
+    <h1>Politicians</h1>
+    <p class="sub">Congress · {{ total }} members. Star a member to get a Telegram alert whenever they disclose a buy or sell. Members have up to 45 days to file.</p>
+  </div>
+  <div class="stat"><span class="stat-n" id="watching-politicians">{{ counts.politicians }}</span><span class="stat-l">watching</span></div>
+</div>
+
+<form class="toolbar" action="/politicians" method="get" role="search"
+  hx-get="/politicians/cards" hx-target="#politician-results" hx-trigger="input delay:250ms, submit" hx-sync="this:replace">
+  <label class="search">
+    <svg aria-hidden="true"><use href="#i-search"/></svg>
+    <input class="input" name="q" type="search" value="{{ filters.q }}" placeholder="Search by name" autocomplete="off" aria-label="Search politicians">
+  </label>
+  <fieldset class="seg">
+    <legend>Chamber</legend>
+    <input type="radio" name="chamber" id="ch-all" value="" {% if not filters.chamber %}checked{% endif %}><label for="ch-all">All</label>
+    <input type="radio" name="chamber" id="ch-senate" value="senate" {% if filters.chamber == "senate" %}checked{% endif %}><label for="ch-senate">Senate</label>
+    <input type="radio" name="chamber" id="ch-house" value="house" {% if filters.chamber == "house" %}checked{% endif %}><label for="ch-house">House</label>
+  </fieldset>
+  <select name="party" aria-label="Filter by party">
+    <option value="">All parties</option>
+    {% for code, name in [("D", "Democrat"), ("R", "Republican"), ("I", "Independent")] %}
+    <option value="{{ code }}" {% if filters.party == code %}selected{% endif %}>{{ name }}</option>
+    {% endfor %}
+  </select>
+  <select name="state" aria-label="Filter by state">
+    <option value="">All states</option>
+    {% for code, name in states %}<option value="{{ code }}" {% if filters.state == code %}selected{% endif %}>{{ name }}</option>{% endfor %}
+  </select>
+  <label class="check"><input type="checkbox" name="starred" value="1" {% if filters.starred %}checked{% endif %}> Starred only</label>
+</form>
+
+<div id="politician-results">{% include "_politician_cards.html" %}</div>
+{% endblock %}

@@ -1,0 +1,36 @@
+{% from "_macros.html" import star_button %}
+{% if total == 0 %}
+<div class="empty-state">
+  <h2>No members loaded yet</h2>
+  <p>The list of Congress members hasn't been imported. Run <code>python -m app.cli load-refdata</code> to load it.</p>
+</div>
+{% else %}
+<p class="results-meta">Showing {{ politicians|length }} of {{ total }}</p>
+<div class="pol-grid">
+{% for p in politicians %}
+  <article class="pol">
+    <div class="pol-top">
+      <span class="avatar" aria-hidden="true">{{ p.initials }}</span>
+      <div class="pol-id">
+        <div class="pol-name">{{ p.full_name }}</div>
+        <div class="pol-role">{{ p.role_label }} · {{ p.party_name }} · {{ p.seat_label }}</div>
+        {% if p.committees %}
+        <div class="pol-comm">{{ p.committees[:3]|join(" · ") }}{% if p.committees|length > 3 %} · +{{ p.committees|length - 3 }} more{% endif %}</div>
+        {% endif %}
+      </div>
+      {{ star_button("politician", p.bioguide_id, p.full_name, p.id in starred_ids) }}
+    </div>
+  </article>
+{% else %}
+  <p class="empty">
+    {%- if filters.starred and not starred_ids -%}
+    You haven't starred any politicians yet. Star one to get alerts when they disclose a trade.
+    {%- elif filters.q -%}
+    No members match “{{ filters.q }}”.
+    {%- else -%}
+    No members match these filters.
+    {%- endif -%}
+  </p>
+{% endfor %}
+</div>
+{% endif %}
