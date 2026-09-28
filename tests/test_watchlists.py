@@ -1,6 +1,9 @@
+from datetime import datetime, timedelta
+
 from sqlalchemy import func, select
 
-from app.models import CompanyWatch, PoliticianWatch
+from app.jobs import market_today
+from app.models import Alert, Company, CompanyWatch, PoliticianWatch, Trade, User
 
 from .conftest import HX, login_params, toast_of
 
@@ -102,3 +105,64 @@ def test_star_unknown_politician_is_404(logged_in, seeded):
 
 def test_alerts_page_shows_empty_state(logged_in):
     assert "No alerts yet" in logged_in.get("/alerts").text
+
+
+def _add_trade(db, ticker: str, code: str, days_ago: int, **extra) -> Trade:
+    company = db.scalar(select(Company).where(Company.ticker == ticker))
+    filed = market_today() - timedelta(days=days_ago)
+    trade = Trade(
+        accession_no=f"acc-{ticker}-{code}-{days_ago}", company_id=company.id, ticker=ticker,
+        insider_name="Timothy D Cook", insider_title="Chief Executive Officer", code=code,
+        shares=4000, avg_price=251.5, value=1_006_000, trade_date=filed - timedelta(days=2), filed_date=filed,
+        source_url="https://www.sec.gov/Archives/edgar/data/320193/x-index.htm", **extra,
+    )
+    db.add(trade)
+    db.commit()
+    return trade
+
+
+def test_stocks_show_latest_trade_and_sort_by_recency(logged_in, seeded, db):
+    _add_trade(db, "XOM", "S", days_ago=10)
+    _add_trade(db, "NVDA", "P", days_ago=1)
+    _add_trade(db, "NVDA", "S", days_ago=5)
+    _add_trade(db, "AAPL", "P", days_ago=120)  # outside the 90-day window
+
+    html = logged_in.get("/stocks/rows").text
+    assert html.index(">NVDA<") < html.index(">XOM<") < html.index(">AAPL<")
+    assert "yesterday" in html and "$1.0M" in html
+    assert "1&nbsp;buy · 1&nbsp;sell" in html
+
+    by_ticker = logged_in.get("/stocks/rows", params={"sort": "ticker"}).text
+    assert by_ticker.index(">AAPL<") < by_ticker.index(">NVDA<")
+
+
+def test_company_page_lists_insider_trades(logged_in, seeded, db):
+    _add_trade(db, "AAPL", "S", days_ago=3, is_10b5_1=True, shares_owned_after=6000)
+    html = logged_in.get("/stocks/aapl").text
+    assert "Apple Inc." in html
+    assert "Timothy D Cook (Chief Executive Officer) sold 4,000 shares at an average of $251.50" in html
+    assert "10b5-1 plan" in html and "holds 6,000 shares afterwards" in html
+    assert 'href="https://www.sec.gov/Archives/edgar/data/320193/x-index.htm"' in html
+
+
+def test_company_page_empty_and_unknown(logged_in, seeded):
+    assert "No insider buys or sells yet" in logged_in.get("/stocks/XOM").text
+    assert logged_in.get("/stocks/NOPE").status_code == 404
+
+
+def test_alerts_page_shows_only_my_alerts(logged_in, seeded, db):
+    me = db.scalar(select(User).where(User.telegram_id == 42))
+    other = User(telegram_id=99, first_name="Other")
+    db.add(other)
+    db.commit()
+    mine = _add_trade(db, "NVDA", "P", days_ago=1)
+    theirs = _add_trade(db, "XOM", "S", days_ago=1)
+    db.add_all([
+        Alert(user_id=me.id, trade_id=mine.id, status="sent", sent_at=datetime(2026, 9, 26, 11, 2)),
+        Alert(user_id=other.id, trade_id=theirs.id, status="sent"),
+    ])
+    db.commit()
+
+    html = logged_in.get("/alerts").text
+    assert "NVDA" in html and "Delivered Sep 26, 11:02 AM UTC" in html
+    assert "XOM" not in html

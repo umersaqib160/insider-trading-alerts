@@ -16,6 +16,8 @@ class Settings(BaseSettings):
     telegram_bot_username: str = ""
     dev_login: bool = False
     dev_telegram_id: int = 1
+    # SEC requires a descriptive User-Agent with contact details, e.g. "Behind The Curtain you@example.com".
+    sec_user_agent: str = ""
 
     @property
     def is_production(self) -> bool:

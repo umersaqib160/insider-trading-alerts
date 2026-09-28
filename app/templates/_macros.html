@@ -2,3 +2,12 @@
 <button type="button" class="star" hx-post="/watch/{{ kind }}/{{ key|urlencode }}" hx-swap="outerHTML" hx-disabled-elt="this"
   aria-pressed="{{ 'true' if on else 'false' }}" aria-label="{{ 'Unstar' if on else 'Star' }} {{ label }}"><svg aria-hidden="true"><use href="#i-star"/></svg></button>
 {%- endmacro %}
+
+{% macro trade_pill(trade) -%}
+{% if trade.is_buy %}<span class="pill buy">Buy</span>{% else %}<span class="pill sell">Sell</span>{% endif %}
+{%- endmacro %}
+
+{% macro trade_summary(trade) -%}
+{{ trade.insider_name }}{{ " (" ~ trade.insider_title ~ ")" if trade.insider_title }} {{ "bought" if trade.is_buy else "sold" }} {{ trade.shares|shares }} shares
+{%- if trade.avg_price %} at an average of ${{ "{:,.2f}".format(trade.avg_price) }}{% endif %}
+{%- endmacro %}

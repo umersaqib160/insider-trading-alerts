@@ -1,0 +1,19 @@
+Description:           Daily Index of EDGAR Dissemination Feed by Form Type
+Last Data Received:    Sep 25, 2026
+Comments:              webmaster@sec.gov
+Anonymous FTP:         ftp://ftp.sec.gov/edgar/
+ 
+ 
+ 
+ 
+Form Type   Company Name                                                  CIK
+      Date Filed  File Name
+---------------------------------------------------------------------------------------------------------------------------------------------
+1-A POS          Modern Mining Technology Corp.                                1898722     20260925    edgar/data/1898722/0001213900-26-103507.txt                                                
+4                APPLE INC                                                     320193      20260925    edgar/data/320193/0001140361-26-000101.txt                                                
+4                Cook Timothy D                                                1214156     20260925    edgar/data/1214156/0001140361-26-000101.txt                                                
+4                NVIDIA CORP                                                   1045810     20260925    edgar/data/1045810/0001045810-26-000202.txt                                                
+4                APPLE INC                                                     320193      20260925    edgar/data/320193/0001140361-26-000303.txt                                                
+4                UNTRACKED SMALL CAP INC                                       999999      20260925    edgar/data/999999/0000999999-26-000404.txt                                                
+4/A              APPLE INC                                                     320193      20260925    edgar/data/320193/0001140361-26-000505.txt                                                
+8-K              APPLE INC                                                     320193      20260925    edgar/data/320193/0000320193-26-000606.txt                                                

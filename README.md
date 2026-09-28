@@ -26,10 +26,33 @@ discloses a trade.
 
 ## Status
 
-**Phases 1–2 are built:** Telegram login, test notifications, the S&P 500
-and Congress lists, and starring. Next is Phase 3, daily SEC Form 4
-ingestion and alerts. Deployment to Railway is waiting on the bot token and
-a Railway account.
+**Phases 1–3 are built:**
+- Telegram login and test notifications
+- The S&P 500 and Congress lists, with starring
+- The daily SEC Form 4 check, which sends a Telegram alert for each insider
+  buy or sell at a starred company
+
+Next is Phase 4, alerts for politicians' trades. Deployment to Railway is
+waiting on the bot token and a Railway account.
+
+### How the daily check works
+
+`python -m app.cli daily` does four things:
+1. Refreshes the S&P 500 and Congress lists.
+2. Reads EDGAR's daily form index for each weekday it hasn't processed yet,
+   looking back up to 5 days.
+3. Downloads only the Form 4s filed for S&P 500 companies, and keeps the
+   open-market purchases (code `P`) and sales (code `S`). Each filing's
+   transaction lines are totalled into one trade with an average price, and
+   pre-planned Rule 10b5-1 trades are flagged.
+4. Sends one Telegram message per trade to every connected user who starred
+   that company. A failed send is retried up to 3 times. If a user has
+   blocked the bot, their account is marked blocked.
+
+Each day's index is recorded once processed, so re-running the job never
+sends duplicates. Trades filed more than 7 days ago are stored but don't
+trigger alerts. Use `--no-alerts` to backfill history without sending
+anything.
 
 ## Running locally
 
@@ -58,14 +81,22 @@ Run the tests with `.venv/bin/pytest`.
    - `APP_ENV=production`
    - `SECRET_KEY`: a long random string, e.g. from `python -c "import secrets; print(secrets.token_urlsafe(48))"`
    - `TELEGRAM_BOT_TOKEN` and `TELEGRAM_BOT_USERNAME` (without the `@`)
+   - `SEC_USER_AGENT`, e.g. `Behind The Curtain you@example.com` (SEC
+     requires a real contact email)
 3. Deploy. The `Procfile` runs database migrations, then starts the app.
    `/healthz` is the health check.
 4. Generate a public domain for the service. In @BotFather, send
    `/setdomain`, pick the bot, and enter that domain so the login widget
    works there.
-5. Load the reference data once from a Railway shell:
-   `python -m app.cli load-refdata`. The daily job will refresh it
-   automatically from Phase 3 on.
+5. Add a second service from the same repo for the daily check:
+   - Start command: `python -m app.cli daily`
+   - Cron schedule: `0 11 * * *` (11:00 UTC, about 7am US Eastern)
+   - The same variables as the web service; reference `DATABASE_URL` from
+     Postgres.
+
+   The cron service runs, prints a summary, and exits. Run it once by hand
+   with `--no-alerts` first to backfill the last few days without flooding
+   Telegram.
 
 ## Product overview
 
@@ -224,8 +255,8 @@ the Railway deployment.
       still pending.)*
 - [x] **Phase 2 — Reference data + watchlists:** load S&P 500 and Congress
       lists; Stocks and Politicians pages with search, filters, star/unstar.
-- [ ] **Phase 3 — SEC Form 4 alerts:** daily ingestion, match against starred
-      companies, send alerts, alert history page.
+- [x] **Phase 3 — SEC Form 4 alerts:** daily ingestion, match against starred
+      companies, send alerts, alert history page, per-company trade page.
 - [ ] **Phase 4 — Politician alerts:** House/Senate PTR ingestion, match
       against starred politicians.
 - [ ] **Phase 5 — Tier 2 signals:** Reddit/StockTwits ingestion, clearly

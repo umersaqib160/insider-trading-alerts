@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% from "_macros.html" import star_button, trade_pill, trade_summary %}
+{% block title %}{{ company.ticker }} · Behind The Curtain{% endblock %}
+{% block content %}
+<p class="crumb"><a href="/stocks">← Stocks</a></p>
+<div class="view-head">
+  <div>
+    <p class="eyebrow">{{ company.sector }}{% if company.sub_industry %} · {{ company.sub_industry }}{% endif %}</p>
+    <h1><span class="tick h-tick">{{ company.ticker }}</span> {{ company.name }}</h1>
+    <p class="sub">Open-market insider buys and sells from SEC Form 4. Stock grants, option exercises and tax withholding are left out.</p>
+  </div>
+  <div class="star-with-label">{{ star_button("company", company.ticker, company.ticker, starred) }}<span class="muted small">Star for alerts</span></div>
+</div>
+
+{% if trades %}
+<ul class="trade-list">
+  {% for t in trades %}
+  <li class="trade">
+    <div class="trade-top">
+      {{ trade_pill(t) }}
+      <span class="v">{{ t.value|money }}</span>
+      {% if t.is_10b5_1 %}<span class="pill neutral" title="Scheduled in advance under a Rule 10b5-1 trading plan">10b5-1 plan</span>{% endif %}
+      <span class="when">Filed {{ t.filed_date|short_date }} · {{ t.filed_date|days_ago(today) }}</span>
+    </div>
+    <p class="trade-body">{{ trade_summary(t) }}</p>
+    <p class="trade-meta">
+      Traded {{ t.trade_date|short_date }} · disclosed {{ t.disclosure_lag_days }} day{{ "" if t.disclosure_lag_days == 1 else "s" }} later
+      {% if t.shares_owned_after is not none %} · holds {{ t.shares_owned_after|shares }} shares afterwards{% endif %}
+      · <a href="{{ t.source_url }}" target="_blank" rel="noopener">View filing</a>
+    </p>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<div class="empty-state">
+  <h2>No insider buys or sells yet</h2>
+  <p>Nothing has been filed for {{ company.ticker }} since daily checks started. Star it to hear the moment something is.</p>
+</div>
+{% endif %}
+{% endblock %}

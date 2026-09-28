@@ -19,9 +19,14 @@
     <option value="">All sectors</option>
     {% for s in sectors %}<option value="{{ s }}" {% if s == filters.sector %}selected{% endif %}>{{ s }}</option>{% endfor %}
   </select>
+  <select name="sort" aria-label="Sort companies">
+    {% for value, label in [("recent", "Sort: latest insider trade"), ("activity", "Sort: most insider trades"), ("ticker", "Sort: ticker A–Z")] %}
+    <option value="{{ value }}" {% if filters.sort == value %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
   <label class="check"><input type="checkbox" name="starred" value="1" {% if filters.starred %}checked{% endif %}> Starred only</label>
 </form>
 
 <div id="stock-results">{% include "_stock_rows.html" %}</div>
-<p class="foot">Insider buys and sells will show next to each company once daily filing checks are running.</p>
+<p class="foot">Open-market buys and sells from SEC Form 4, checked daily. Click a ticker to see its insider trades.</p>
 {% endblock %}

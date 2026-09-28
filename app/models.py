@@ -1,7 +1,7 @@
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
-from sqlalchemy import JSON, BigInteger, Boolean, DateTime, ForeignKey, Integer, String
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import JSON, BigInteger, Boolean, Date, DateTime, Float, ForeignKey, Integer, String, UniqueConstraint
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .db import Base
 
@@ -132,3 +132,76 @@ class PoliticianWatch(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
     politician_id: Mapped[int] = mapped_column(ForeignKey("politicians.id", ondelete="CASCADE"), primary_key=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+SOURCE_FORM4 = "sec_form4"
+CODE_PURCHASE = "P"
+CODE_SALE = "S"
+
+ALERT_PENDING = "pending"
+ALERT_SENT = "sent"
+ALERT_FAILED = "failed"
+
+
+class Trade(Base):
+    """One insider's open-market buys or sells in one filing, totalled across its transaction lines."""
+
+    __tablename__ = "trades"
+    __table_args__ = (UniqueConstraint("accession_no", "code", name="uq_trades_accession_code"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    source: Mapped[str] = mapped_column(String(16), default=SOURCE_FORM4)
+    accession_no: Mapped[str] = mapped_column(String(25), index=True)
+    company_id: Mapped[int | None] = mapped_column(ForeignKey("companies.id", ondelete="CASCADE"), index=True)
+    ticker: Mapped[str] = mapped_column(String(16))
+    insider_name: Mapped[str] = mapped_column(String(256))
+    insider_title: Mapped[str] = mapped_column(String(256), default="")
+    code: Mapped[str] = mapped_column(String(1))
+    shares: Mapped[float] = mapped_column(Float)
+    avg_price: Mapped[float | None] = mapped_column(Float)
+    value: Mapped[float | None] = mapped_column(Float)
+    shares_owned_after: Mapped[float | None] = mapped_column(Float)
+    trade_date: Mapped[date] = mapped_column(Date)
+    filed_date: Mapped[date] = mapped_column(Date, index=True)
+    is_10b5_1: Mapped[bool] = mapped_column(Boolean, default=False)
+    source_url: Mapped[str] = mapped_column(String(512))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+    company: Mapped[Company | None] = relationship()
+
+    @property
+    def is_buy(self) -> bool:
+        return self.code == CODE_PURCHASE
+
+    @property
+    def disclosure_lag_days(self) -> int:
+        return (self.filed_date - self.trade_date).days
+
+
+class Alert(Base):
+    __tablename__ = "alerts"
+    __table_args__ = (UniqueConstraint("user_id", "trade_id", name="uq_alerts_user_trade"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    trade_id: Mapped[int] = mapped_column(ForeignKey("trades.id", ondelete="CASCADE"), index=True)
+    status: Mapped[str] = mapped_column(String(16), default=ALERT_PENDING, index=True)
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    error: Mapped[str | None] = mapped_column(String(256))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    user: Mapped[User] = relationship()
+    trade: Mapped[Trade] = relationship()
+
+
+class IngestedDay(Base):
+    """A filing index that has been fully processed, so reruns skip it."""
+
+    __tablename__ = "ingested_days"
+
+    source: Mapped[str] = mapped_column(String(16), primary_key=True)
+    day: Mapped[date] = mapped_column(Date, primary_key=True)
+    filings: Mapped[int] = mapped_column(Integer, default=0)
+    trades: Mapped[int] = mapped_column(Integer, default=0)
+    completed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
