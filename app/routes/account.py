@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Form, Request
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 
@@ -53,14 +53,3 @@ def set_telegram_connection(
         return HTMLResponse(status_code=404)
     db.commit()
     return render(request, "_telegram_state.html", {"user": user, "oob": True}, toast=toast)
-
-
-@router.post("/settings/unverified", response_class=HTMLResponse)
-def set_unverified(
-    request: Request, enabled: str = Form(""),
-    db: Session = Depends(get_db), user: User = Depends(current_user),
-):
-    user.include_unverified = enabled == "on"
-    db.commit()
-    toast = "Unverified forum signals turned on." if user.include_unverified else "Unverified forum signals turned off."
-    return render(request, "_empty.html", toast=toast)

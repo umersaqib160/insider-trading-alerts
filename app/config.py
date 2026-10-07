@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     dev_telegram_id: int = 1
     # SEC requires a descriptive User-Agent with contact details, e.g. "Behind The Curtain you@example.com".
     sec_user_agent: str = ""
+    quiver_api_key: str = ""
 
     @property
     def is_production(self) -> bool:

@@ -353,6 +353,20 @@ td.c-sector, td.c-sub { color: var(--muted); font-size: 14px; }
 .trade-meta { color: var(--muted); font-size: 13px; }
 .trade-meta a { color: var(--accent); }
 
+.tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 10px; background: var(--accent-soft); color: var(--accent); }
+.badge { font-size: 10px; font-weight: 700; letter-spacing: 0.04em; padding: 1px 5px; border-radius: 4px; background: var(--surface-2); color: var(--muted); vertical-align: middle; }
+.trade.is-held { border-style: dashed; border-color: var(--line-strong); }
+.more-row td { text-align: center; padding: 14px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.chip { font-size: 12px; padding: 3px 9px; border-radius: 12px; background: var(--surface-2); color: var(--ink-2); }
+.chip.lead { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.note { color: var(--muted); font-size: 14px; margin-bottom: 16px; }
+.pol-head { display: flex; gap: 14px; align-items: center; }
+.pol-last { border-top: 1px solid var(--line); margin-top: 14px; padding-top: 12px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 14px; }
+.pol-last .range { font-family: var(--font-mono); font-size: 12px; color: var(--ink-2); }
+.pol-last .when { color: var(--muted); font-size: 13px; margin-left: auto; }
+
 /* ---------- politicians ---------- */
 .pol-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
 .pol { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }

@@ -56,11 +56,3 @@ def test_disconnect_pauses_and_blocks_test_sends(logged_in, telegram, db):
 
 def test_unknown_connection_action_is_404(logged_in):
     assert logged_in.post("/settings/telegram/explode", headers=HX).status_code == 404
-
-
-def test_unverified_signals_toggle(logged_in, db):
-    off = logged_in.post("/settings/unverified", data={}, headers=HX)
-    assert _user(db).include_unverified is False
-    assert toast_of(off) == "Unverified forum signals turned off."
-    logged_in.post("/settings/unverified", data={"enabled": "on"}, headers=HX)
-    assert _user(db).include_unverified is True

@@ -2,60 +2,105 @@ from dataclasses import dataclass
 from datetime import date, timedelta
 from html import escape
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from .formatting import money, shares, short_date
 from .models import (
     ALERT_FAILED, ALERT_PENDING, ALERT_SENT, TELEGRAM_BLOCKED, TELEGRAM_CONNECTED,
-    Alert, CompanyWatch, Trade, User, utcnow,
+    Alert, CompanyWatch, PoliticianWatch, Trade, User, utcnow,
 )
 from .telegram import TelegramClient, TelegramSendError
 
 # Trades filed longer ago than this are history, not news: store them but don't alert.
 ALERT_MAX_AGE_DAYS = 7
 MAX_SEND_ATTEMPTS = 3
+DISCLAIMER = "ℹ️ <i>From public filings. Not investment advice.</i>"
 
 
 @dataclass
 class DispatchResult:
-    created: int = 0
     sent: int = 0
     failed: int = 0
 
 
+def value_label(trade: Trade) -> str:
+    if trade.congress and trade.congress.amount_range:
+        return trade.congress.amount_range.replace(" - ", " – ")
+    if trade.value_low is None:
+        return "Value not disclosed"
+    if trade.value_high is None:
+        return f"{money(trade.value_low)}+"
+    if trade.value_low == trade.value_high:
+        return money(trade.value_low)
+    return f"{money(trade.value_low)} – {money(trade.value_high)}"
+
+
+def _who(trade: Trade) -> str:
+    if trade.politician:
+        p = trade.politician
+        who = f"{p.title} {p.full_name} ({p.short_label})"
+    else:
+        who = trade.actor_name + (f" · {trade.actor_role}" if trade.actor_role else "")
+    return escape(who)
+
+
 def format_trade_message(trade: Trade) -> str:
-    buy = trade.is_buy
-    company = trade.company.name if trade.company else trade.ticker
-    who = f"{trade.insider_name} ({trade.insider_title})" if trade.insider_title else trade.insider_name
-    action = f"{'bought' if buy else 'sold'} {shares(trade.shares)} shares"
-    if trade.avg_price:
-        action += f" (avg ${trade.avg_price:,.2f})"
-    lines = [
-        f"<b>{'BUY' if buy else 'SELL'} · {escape(trade.ticker)}</b> ({escape(company)})",
-        f"{escape(who)} {action}",
-    ]
-    if trade.value:
-        lines.append(f"Value: {money(trade.value)}")
-    lines.append(f"Traded {short_date(trade.trade_date)} · Filed {short_date(trade.filed_date)}")
-    if trade.is_10b5_1:
-        lines.append("Pre-planned under a Rule 10b5-1 trading plan")
-    lines.append(f'<a href="{escape(trade.source_url)}">View the Form 4 on SEC EDGAR</a>')
+    """The Telegram alert. HTML parse mode; every value from a filing is escaped."""
+    direction = "🟢 BUY" if trade.is_buy else "🔴 SELL"
+    icon = "🏢" if trade.is_insider else "🏛"
+    ticker = escape(trade.ticker) if trade.ticker else "—"
+    lines = [f"{icon} <b>{direction} · {ticker}</b> — {escape(trade.asset_name or trade.ticker)}", f"👤 {_who(trade)}"]
+
+    if trade.is_insider and trade.insider:
+        detail = f"💵 <b>{value_label(trade)}</b> · {shares(trade.insider.shares)} shares"
+        if trade.insider.avg_price:
+            detail += f" @ ${trade.insider.avg_price:,.2f}"
+        lines.append(detail)
+        if trade.insider.is_10b5_1:
+            lines.append("🗓 Pre-planned sale (10b5-1 trading plan)" if not trade.is_buy
+                         else "🗓 Pre-planned (10b5-1 trading plan)")
+    else:
+        detail = f"💵 <b>{value_label(trade)}</b>"
+        if trade.congress and trade.congress.owner and trade.congress.owner.lower() != "self":
+            detail += f" · Owner: {escape(trade.congress.owner)}"
+        lines.append(detail)
+
+    lag = trade.disclosure_lag_days
+    lag_text = "same day" if lag <= 0 else f"{lag} day{'s' if lag != 1 else ''} later"
+    filed_word = "Filed" if trade.is_insider else "Reported"
+    lines.append(f"📅 Traded {short_date(trade.trade_date)} · {filed_word} {short_date(trade.filed_date)} ({lag_text})")
+
+    tags = [t for t in trade.public_tags if not t.startswith("Pre-planned")]
+    if tags:
+        lines.append("🏷 " + " · ".join(escape(t) for t in tags))
+    source = "the Form 4 on SEC EDGAR" if trade.is_insider else (
+        "House disclosures" if trade.source == "house" else "Senate disclosures")
+    lines.append(f'🔗 <a href="{escape(trade.source_url)}">View {source}</a>')
+    lines.append(DISCLAIMER)
     return "\n".join(lines)
 
 
+def _watchers(db: Session, trade: Trade) -> list[User]:
+    conditions = []
+    if trade.company_id:
+        conditions.append(User.id.in_(select(CompanyWatch.user_id).where(CompanyWatch.company_id == trade.company_id)))
+    if trade.politician_id:
+        conditions.append(User.id.in_(
+            select(PoliticianWatch.user_id).where(PoliticianWatch.politician_id == trade.politician_id)))
+    if not conditions:
+        return []
+    return db.scalars(select(User).where(or_(*conditions), User.telegram_status == TELEGRAM_CONNECTED)).all()
+
+
 def create_alerts(db: Session, trades: list[Trade], today: date) -> int:
-    """Queue one alert per connected user watching each recent trade's company."""
+    """Queue one alert per connected user who starred the company or the politician behind each recent trade."""
     cutoff = today - timedelta(days=ALERT_MAX_AGE_DAYS)
     created = 0
     for trade in trades:
-        if trade.company_id is None or trade.filed_date < cutoff:
+        if trade.needs_review or trade.filed_date < cutoff:
             continue
-        watchers = db.scalars(
-            select(User).join(CompanyWatch, CompanyWatch.user_id == User.id)
-            .where(CompanyWatch.company_id == trade.company_id, User.telegram_status == TELEGRAM_CONNECTED)
-        )
-        for user in watchers:
+        for user in _watchers(db, trade):
             if db.scalar(select(Alert.id).where(Alert.user_id == user.id, Alert.trade_id == trade.id)) is None:
                 db.add(Alert(user_id=user.id, trade_id=trade.id))
                 created += 1

@@ -26,23 +26,15 @@
           <div class="txt"><div class="t">Sells <span class="pill sell">Sell</span></div><p class="d">Open-market sales by company insiders (Form 4 code S) and full or partial sales disclosed by politicians.</p></div>
           <input type="checkbox" class="switch" id="pref-sells" role="switch" checked disabled aria-label="Sells (always on)">
         </li>
-        <li>
-          <div class="txt">
-            <div class="t">Unverified forum signals <span class="pill rumor">Unverified</span> <span class="pill neutral">Not live yet</span></div>
-            <p class="d">Reddit and StockTwits posts that mention your starred stocks or politicians. These are claims, not filings, and are always labelled that way.</p>
-          </div>
-          <input type="checkbox" class="switch" id="pref-unverified" name="enabled" role="switch" aria-label="Unverified forum signals"
-            {% if user.include_unverified %}checked{% endif %} hx-post="/settings/unverified" hx-trigger="change" hx-swap="none">
-        </li>
       </ul>
-      <p class="fine">Stock grants, option exercises and shares withheld for tax are skipped. Buys and sells can't be turned off yet.</p>
+      <p class="fine">Stock grants, option exercises and shares withheld for tax are skipped. Buys and sells can't be turned off yet. Starring a company also covers members of Congress trading it.</p>
     </section>
 
     <section class="panel" aria-labelledby="del-h">
       <h2 id="del-h">Delivery and account</h2>
       <dl class="dl">
         <dt>Format</dt><dd>One Telegram message per trade</dd>
-        <dt>Schedule</dt><dd>Filings checked once a day, each morning (US Eastern)</dd>
+        <dt>Schedule</dt><dd>New filings checked every 10 minutes</dd>
         <dt>Sign-in</dt><dd>Telegram</dd>
       </dl>
       <form class="btn-row" method="post" action="/logout"><button class="btn ghost" type="submit">Log out</button></form>

@@ -10,9 +10,9 @@ LOGIN_MAX_AGE_SECONDS = 24 * 60 * 60
 API_BASE = "https://api.telegram.org"
 
 TEST_MESSAGE = (
-    "<b>Test alert</b>\n"
+    "✅ <b>Test alert</b>\n"
     "Your Behind The Curtain connection works. "
-    "Alerts for your starred companies and politicians will arrive here."
+    "Alerts for your starred companies and politicians will arrive here. 🎭"
 )
 
 

@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% from "_macros.html" import star_button, trade_item %}
+{% block title %}{{ politician.full_name }} · Behind The Curtain{% endblock %}
+{% block content %}
+<p class="crumb"><a href="/politicians">← Politicians</a></p>
+<div class="view-head">
+  <div class="pol-head">
+    <span class="avatar lg" aria-hidden="true">{{ politician.initials }}</span>
+    <div>
+      <p class="eyebrow">{{ politician.role_label }} · {{ politician.party_name }} · {{ politician.seat_label }}</p>
+      <h1>{{ politician.full_name }}</h1>
+    </div>
+  </div>
+  <div class="star-with-label">{{ star_button("politician", politician.bioguide_id, politician.full_name, starred) }}<span class="muted small">Star for alerts</span></div>
+</div>
+{% if politician.committees %}
+<p class="chips">
+  {% for c in politician.committees %}<span class="chip{{ ' lead' if c in politician.led_committees }}">{{ c }}{% if c in politician.led_committees %} · leads{% endif %}</span>{% endfor %}
+</p>
+{% endif %}
+<p class="sub note">Trades reported under the STOCK Act. Members have up to 45 days to report, so check the trade date as well as the report date.</p>
+
+{% if trades %}
+<ul class="trade-list">
+  {% for t in trades %}{{ trade_item(t, today, show_asset=True) }}{% endfor %}
+</ul>
+{% else %}
+<div class="empty-state">
+  <h2>No reported trades yet</h2>
+  <p>Nothing has been reported for {{ politician.full_name }} since tracking started. Star them to hear the moment something is.</p>
+</div>
+{% endif %}
+{% endblock %}

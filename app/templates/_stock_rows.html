@@ -1,11 +1,10 @@
-{% from "_macros.html" import star_button, trade_pill %}
 {% if total == 0 %}
 <div class="empty-state">
   <h2>No companies loaded yet</h2>
-  <p>The S&amp;P 500 list hasn't been imported. Run <code>python -m app.cli load-refdata</code> to load companies and members of Congress.</p>
+  <p>The company list hasn't been imported. Run <code>python -m app.cli load-refdata</code> to load US-listed companies and members of Congress.</p>
 </div>
 {% else %}
-<p class="results-meta">Showing {{ companies|length }} of {{ total }}</p>
+<p class="results-meta">{{ "{:,}".format(matched) }} of {{ "{:,}".format(total) }} companies{% if starred_ids %} · starred first{% endif %}</p>
 <div class="table-wrap">
   <table>
     <thead><tr>
@@ -13,40 +12,11 @@
       <th>Ticker</th>
       <th>Company</th>
       <th class="c-sector">Sector</th>
-      <th>Latest insider trade</th>
+      <th>Latest trade</th>
       <th class="c-act">Last 90 days</th>
     </tr></thead>
     <tbody>
-    {% for c in companies %}
-      {% set a = activity.get(c.id) %}
-      <tr>
-        <td class="c-star">{{ star_button("company", c.ticker, c.ticker, c.id in starred_ids) }}</td>
-        <td class="tick"><a class="row-link" href="/stocks/{{ c.ticker|urlencode }}">{{ c.ticker }}</a></td>
-        <td class="c-co">{{ c.name }}</td>
-        <td class="c-sector">{{ c.sector }}</td>
-        <td>
-          {% if a %}
-          <span class="latest">{{ trade_pill(a.latest) }}<span class="v">{{ a.latest.value|money }}</span><span class="muted">{{ a.latest.filed_date|days_ago(today) }}</span></span>
-          {% else %}<span class="muted small">No buys or sells</span>{% endif %}
-        </td>
-        <td class="c-act">
-          {% if a %}
-          {% set total_trades = a.buys + a.sells %}
-          <div class="act"><span class="split" aria-hidden="true"><span class="b" style="width:{{ 100 * a.buys / total_trades }}%"></span><span class="s" style="width:{{ 100 * a.sells / total_trades }}%"></span></span>{{ a.buys }}&nbsp;buy · {{ a.sells }}&nbsp;sell</div>
-          {% else %}<span class="muted">—</span>{% endif %}
-        </td>
-      </tr>
-    {% else %}
-      <tr><td colspan="6" class="empty">
-        {%- if filters.starred and not starred_ids -%}
-        You haven't starred any companies yet. Star one to get alerts when its insiders trade.
-        {%- elif filters.q -%}
-        No companies match “{{ filters.q }}”.
-        {%- else -%}
-        No companies match these filters.
-        {%- endif -%}
-      </td></tr>
-    {% endfor %}
+    {% include "_stock_page_rows.html" %}
     </tbody>
   </table>
 </div>

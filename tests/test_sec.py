@@ -134,13 +134,25 @@ def test_edgar_client_sends_user_agent_and_throttles():
     assert client.get_text("/a") == "ok"
     assert client.get_text("/b") == "ok"
     assert seen == ["Behind The Curtain test@example.com"] * 2
-    assert clock.slept == [pytest.approx(0.15)]
+    assert clock.slept == [pytest.approx(0.2)]
 
 
 def test_edgar_client_404_is_none_and_errors_raise():
     assert _edgar(lambda r: httpx.Response(404)).get_text("/missing") is None
     with pytest.raises(EdgarError, match="HTTP 503"):
         _edgar(lambda r: httpx.Response(503)).get_text("/busy")
+
+
+def test_edgar_client_retries_when_throttled():
+    responses = iter([httpx.Response(429, headers={"Retry-After": "5"}), httpx.Response(503), httpx.Response(200, text="ok")])
+    clock = FakeClock()
+    assert _edgar(lambda r: next(responses), clock).get_text("/x") == "ok"
+    assert [s for s in clock.slept if s > 1] == [5, 30.0]  # Retry-After, then the second backoff step
+
+
+def test_edgar_client_gives_up_after_repeated_throttling():
+    with pytest.raises(EdgarError, match="HTTP 429"):
+        _edgar(lambda r: httpx.Response(429)).get_text("/x")
 
 
 def test_edgar_client_requires_user_agent():

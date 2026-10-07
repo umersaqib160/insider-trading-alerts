@@ -9,6 +9,7 @@ COMMITTEES_URL = f"{BASE_URL}/committees-current.json"
 MEMBERSHIP_URL = f"{BASE_URL}/committee-membership-current.json"
 
 PARTY_CODES = {"Democrat": "D", "Republican": "R", "Independent": "I"}
+LEAD_TITLES = {"Chair", "Chairman", "Chairwoman", "Ranking Member"}
 _COMMITTEE_PREFIX = re.compile(
     r"^(?:House|Senate|Joint)\s+(?:Permanent\s+)?(?:Select\s+|Special\s+)?Committee\s+on\s+(?:the\s+)?"
 )
@@ -25,6 +26,7 @@ class PoliticianRecord:
     state: str
     district: int | None
     committees: list[str] = field(default_factory=list)
+    led_committees: list[str] = field(default_factory=list)
 
 
 def committee_short_name(name: str) -> str:
@@ -35,11 +37,14 @@ def parse_legislators(legislators: list[dict], committees: list[dict], membershi
     # Only full committees; subcommittee ids (e.g. "SSAF13") aren't in the committees list.
     names = {c["thomas_id"]: committee_short_name(c["name"]) for c in committees if c.get("thomas_id")}
     by_member: dict[str, set[str]] = defaultdict(set)
+    leads: dict[str, set[str]] = defaultdict(set)
     for committee_id, members in membership.items():
         if committee_id in names:
             for member in members:
                 if member.get("bioguide"):
                     by_member[member["bioguide"]].add(names[committee_id])
+                    if (member.get("title") or "").strip() in LEAD_TITLES:
+                        leads[member["bioguide"]].add(names[committee_id])
 
     records = []
     for person in legislators:
@@ -61,5 +66,6 @@ def parse_legislators(legislators: list[dict], committees: list[dict], membershi
             state=term.get("state", ""),
             district=term.get("district") if term.get("type") == "rep" else None,
             committees=sorted(by_member.get(bioguide, set())),
+            led_committees=sorted(leads.get(bioguide, set())),
         ))
     return records

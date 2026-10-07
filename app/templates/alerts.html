@@ -1,37 +1,26 @@
 {% extends "base.html" %}
-{% from "_macros.html" import trade_pill, trade_summary %}
+{% from "_macros.html" import trade_item %}
 {% block title %}Alerts · Behind The Curtain{% endblock %}
 {% block content %}
 <div class="view-head">
   <div>
     <h1>Alerts</h1>
-    <p class="sub">Every alert for your starred companies, newest first. Filings are checked once a day.</p>
+    <p class="sub">Every alert for the companies and politicians you've starred, newest first.</p>
   </div>
 </div>
 {% if alerts %}
 <ul class="trade-list">
   {% for alert in alerts %}
-  {% set t = alert.trade %}
-  <li class="trade">
-    <div class="trade-top">
-      {{ trade_pill(t) }}
-      <span class="src">SEC Form 4</span>
-      <span class="when">
-        {% if alert.status == "sent" %}Delivered {{ alert.sent_at.strftime("%b %-d, %-I:%M %p") }} UTC
-        {% elif alert.status == "failed" %}<span class="bad">Not delivered</span>{% if alert.error %}: {{ alert.error }}{% endif %}
-        {% else %}Waiting to send{% endif %}
-      </span>
-    </div>
-    <p class="trade-head"><a class="tick" href="/stocks/{{ t.ticker|urlencode }}">{{ t.ticker }}</a> <span class="co">{{ t.company.name if t.company else "" }}</span></p>
-    <p class="trade-body">{{ trade_summary(t) }} · <span class="v">{{ t.value|money }}</span></p>
-    <p class="trade-meta">Traded {{ t.trade_date|short_date }} · Filed {{ t.filed_date|short_date }}{% if t.is_10b5_1 %} · 10b5-1 plan{% endif %} · <a href="{{ t.source_url }}" target="_blank" rel="noopener">View filing</a></p>
-  </li>
+    {% if alert.status == "sent" %}{% set status = "Delivered " ~ alert.sent_at.strftime("%b %-d, %-I:%M %p") ~ " UTC" %}
+    {% elif alert.status == "failed" %}{% set status = "Not delivered" ~ (": " ~ alert.error if alert.error else "") %}
+    {% else %}{% set status = "Waiting to send" %}{% endif %}
+    {{ trade_item(alert.trade, today, show_asset=True, status=status) }}
   {% endfor %}
 </ul>
 {% else %}
 <div class="empty-state">
   <h2>No alerts yet</h2>
-  <p>Filings are checked once a day. When a company you've starred has an insider buy or sell, the alert lands in Telegram and shows up here.</p>
+  <p>New filings are checked every 10 minutes. When a company or politician you've starred has a buy or sell, the alert lands in Telegram and shows up here.</p>
   <div class="btn-row">
     <a class="btn primary" href="/stocks">Star companies</a>
     <a class="btn ghost" href="/politicians">Star politicians</a>

@@ -1,0 +1,39 @@
+{% from "_macros.html" import star_button, trade_pill %}
+{% for c in companies %}
+  {% set a = activity.get(c.id) %}
+  <tr>
+    <td class="c-star">{{ star_button("company", c.ticker, c.ticker, c.id in starred_ids) }}</td>
+    <td class="tick"><a class="row-link" href="/stocks/{{ c.ticker|urlencode }}">{{ c.ticker }}</a></td>
+    <td class="c-co">{{ c.name }}{% if c.in_sp500 %} <span class="badge" title="S&amp;P 500 member">S&amp;P</span>{% endif %}</td>
+    <td class="c-sector">{{ c.sector or "—" }}</td>
+    <td>
+      {% if a %}
+      <span class="latest">{{ trade_pill(a.latest) }}<span class="v">{{ a.latest|value_label }}</span><span class="muted">{{ "🏛 " if not a.latest.is_insider }}{{ a.latest.filed_date|days_ago(today) }}</span></span>
+      {% else %}<span class="muted small">No buys or sells</span>{% endif %}
+    </td>
+    <td class="c-act">
+      {% if a %}
+      {% set total_trades = a.buys + a.sells %}
+      <div class="act"><span class="split" aria-hidden="true"><span class="b" style="width:{{ 100 * a.buys / total_trades }}%"></span><span class="s" style="width:{{ 100 * a.sells / total_trades }}%"></span></span>{{ a.buys }}&nbsp;buy · {{ a.sells }}&nbsp;sell</div>
+      {% else %}<span class="muted">—</span>{% endif %}
+    </td>
+  </tr>
+{% else %}
+  <tr><td colspan="6" class="empty">
+    {%- if filters.starred and not starred_ids -%}
+    You haven't starred any companies yet. Star one to get alerts when its insiders or members of Congress trade it.
+    {%- elif filters.q -%}
+    No companies match “{{ filters.q }}”.
+    {%- else -%}
+    No companies match these filters.
+    {%- endif -%}
+  </td></tr>
+{% endfor %}
+{% if next_offset %}
+  <tr class="more-row"><td colspan="6">
+    <button type="button" class="btn ghost" hx-get="/stocks/rows" hx-include="#stock-filters"
+      hx-vals='{"offset": {{ next_offset }}}' hx-target="closest tr" hx-swap="outerHTML">
+      Show more ({{ "{:,}".format(matched - next_offset) }} left)
+    </button>
+  </td></tr>
+{% endif %}

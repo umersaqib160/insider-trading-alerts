@@ -1,4 +1,4 @@
-{% from "_macros.html" import star_button %}
+{% from "_macros.html" import star_button, trade_pill %}
 {% if total == 0 %}
 <div class="empty-state">
   <h2>No members loaded yet</h2>
@@ -12,7 +12,7 @@
     <div class="pol-top">
       <span class="avatar" aria-hidden="true">{{ p.initials }}</span>
       <div class="pol-id">
-        <div class="pol-name">{{ p.full_name }}</div>
+        <div class="pol-name"><a class="row-link" href="/politicians/{{ p.bioguide_id }}">{{ p.full_name }}</a></div>
         <div class="pol-role">{{ p.role_label }} · {{ p.party_name }} · {{ p.seat_label }}</div>
         {% if p.committees %}
         <div class="pol-comm">{{ p.committees[:3]|join(" · ") }}{% if p.committees|length > 3 %} · +{{ p.committees|length - 3 }} more{% endif %}</div>
@@ -20,6 +20,13 @@
       </div>
       {{ star_button("politician", p.bioguide_id, p.full_name, p.id in starred_ids) }}
     </div>
+    {% set a = activity.get(p.id) %}
+    {% if a %}
+    <div class="pol-last">
+      {{ trade_pill(a.latest) }}<span class="tick">{{ a.latest.ticker or "—" }}</span><span class="range">{{ a.latest|value_label }}</span>
+      <span class="when">reported {{ a.latest.filed_date|days_ago(today) }}</span>
+    </div>
+    {% endif %}
   </article>
 {% else %}
   <p class="empty">

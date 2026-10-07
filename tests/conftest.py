@@ -100,16 +100,24 @@ def logged_in(client) -> TestClient:
 @pytest.fixture
 def seeded(db):
     db.add_all([
-        Company(ticker="AAPL", name="Apple Inc.", sector="Information Technology", sub_industry="Technology Hardware", cik="0000320193"),
-        Company(ticker="NVDA", name="Nvidia", sector="Information Technology", sub_industry="Semiconductors"),
-        Company(ticker="XOM", name="Exxon Mobil", sector="Energy", sub_industry="Integrated Oil & Gas"),
-        Company(ticker="GONE", name="Departed Co", sector="Energy", in_sp500=False),
+        Company(ticker="AAPL", name="Apple Inc.", sector="Information Technology", industry="Technology Hardware",
+                cik="0000320193", exchange="Nasdaq", in_sp500=True),
+        Company(ticker="NVDA", name="Nvidia", sector="Information Technology", industry="Semiconductors",
+                cik="0001045810", exchange="Nasdaq", in_sp500=True),
+        Company(ticker="XOM", name="Exxon Mobil", sector="Energy", industry="Integrated Oil & Gas",
+                cik="0000034088", exchange="NYSE", in_sp500=True),
+        Company(ticker="LMT", name="Lockheed Martin", sector="Industrials", industry="Aerospace & Defense",
+                cik="0000936468", exchange="NYSE", in_sp500=True),
+        Company(ticker="SMCO", name="Small Co", sector="Industrials", industry="Machinery", cik="0000000777",
+                exchange="Nasdaq"),
+        Company(ticker="GONE", name="Departed Co", sector="Energy", listed=False),
     ])
     db.add_all([
         Politician(bioguide_id="C000127", full_name="Maria Cantwell", first_name="Maria", last_name="Cantwell",
-                   chamber="senate", party="D", state="WA", committees=["Commerce, Science, and Transportation", "Intelligence"]),
+                   chamber="senate", party="D", state="WA", committees=["Commerce, Science, and Transportation", "Intelligence"],
+                   led_committees=["Commerce, Science, and Transportation"]),
         Politician(bioguide_id="B001236", full_name="John Boozman", first_name="John", last_name="Boozman",
-                   chamber="senate", party="R", state="AR", committees=[]),
+                   chamber="senate", party="R", state="AR", committees=["Armed Services"]),
         Politician(bioguide_id="P000197", full_name="Nancy Pelosi", first_name="Nancy", last_name="Pelosi",
                    chamber="house", party="D", state="CA", district=11, committees=[]),
     ])

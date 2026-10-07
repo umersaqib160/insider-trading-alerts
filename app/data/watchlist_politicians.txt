@@ -1,0 +1,16 @@
+# High-profile members of Congress: their trades score +20 on the "notable" scale.
+# One name per line, as Congress lists it (first and last name). Lines starting with # are ignored.
+# Names that don't match a current member are simply skipped; `python -m app.cli watchlist`
+# shows which ones matched. This is a starter list of frequently watched traders: edit freely.
+Nancy Pelosi
+Ro Khanna
+Josh Gottheimer
+Dan Crenshaw
+Michael McCaul
+Tommy Tuberville
+Markwayne Mullin
+Debbie Wasserman Schultz
+Jared Moskowitz
+Rob Bresnahan
+Cleo Fields
+Kevin Hern

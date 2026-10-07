@@ -1,18 +1,35 @@
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from sqlalchemy import func, select
 
-from app.jobs import market_today
-from app.models import Alert, Company, CompanyWatch, PoliticianWatch, Trade, User
+from app.models import Alert, CompanyWatch, PoliticianWatch, User
 
 from .conftest import HX, login_params, toast_of
+from .factories import congress_trade, insider_trade
 
 
-def test_stocks_page_lists_only_current_sp500(logged_in, seeded):
+def test_stocks_page_lists_listed_companies(logged_in, seeded):
     html = logged_in.get("/stocks").text
-    assert "Apple Inc." in html and "Exxon Mobil" in html
+    assert "Apple Inc." in html and "Small Co" in html
     assert "Departed Co" not in html
-    assert "S&amp;P 500 · 3 companies" in html
+    assert "5 US companies" in html
+
+
+def test_sp500_filter(logged_in, seeded):
+    html = logged_in.get("/stocks/rows", params={"sp500": "1"}).text
+    assert "AAPL" in html and "SMCO" not in html
+    assert "4 of 5 companies" in html
+
+
+def test_stocks_are_paged(logged_in, seeded, monkeypatch):
+    from app.routes import lists
+    monkeypatch.setattr(lists, "PAGE_SIZE", 2)
+    first = logged_in.get("/stocks/rows", params={"sort": "ticker"}).text
+    assert ">AAPL<" in first and ">LMT<" in first and ">NVDA<" not in first
+    assert "Show more (3 left)" in first
+    second = logged_in.get("/stocks/rows", params={"sort": "ticker", "offset": 2}).text
+    assert ">NVDA<" in second and ">SMCO<" in second and "<table" not in second
+    assert "Show more (1 left)" in second
 
 
 def test_stocks_page_explains_how_to_load_data(logged_in):
@@ -107,25 +124,11 @@ def test_alerts_page_shows_empty_state(logged_in):
     assert "No alerts yet" in logged_in.get("/alerts").text
 
 
-def _add_trade(db, ticker: str, code: str, days_ago: int, **extra) -> Trade:
-    company = db.scalar(select(Company).where(Company.ticker == ticker))
-    filed = market_today() - timedelta(days=days_ago)
-    trade = Trade(
-        accession_no=f"acc-{ticker}-{code}-{days_ago}", company_id=company.id, ticker=ticker,
-        insider_name="Timothy D Cook", insider_title="Chief Executive Officer", code=code,
-        shares=4000, avg_price=251.5, value=1_006_000, trade_date=filed - timedelta(days=2), filed_date=filed,
-        source_url="https://www.sec.gov/Archives/edgar/data/320193/x-index.htm", **extra,
-    )
-    db.add(trade)
-    db.commit()
-    return trade
-
-
 def test_stocks_show_latest_trade_and_sort_by_recency(logged_in, seeded, db):
-    _add_trade(db, "XOM", "S", days_ago=10)
-    _add_trade(db, "NVDA", "P", days_ago=1)
-    _add_trade(db, "NVDA", "S", days_ago=5)
-    _add_trade(db, "AAPL", "P", days_ago=120)  # outside the 90-day window
+    insider_trade(db, "XOM", buy=False, days_ago=10)
+    insider_trade(db, "NVDA", buy=True, days_ago=1)
+    insider_trade(db, "NVDA", buy=False, days_ago=5)
+    insider_trade(db, "AAPL", buy=True, days_ago=120)  # outside the 90-day window
 
     html = logged_in.get("/stocks/rows").text
     assert html.index(">NVDA<") < html.index(">XOM<") < html.index(">AAPL<")
@@ -136,18 +139,52 @@ def test_stocks_show_latest_trade_and_sort_by_recency(logged_in, seeded, db):
     assert by_ticker.index(">AAPL<") < by_ticker.index(">NVDA<")
 
 
-def test_company_page_lists_insider_trades(logged_in, seeded, db):
-    _add_trade(db, "AAPL", "S", days_ago=3, is_10b5_1=True, shares_owned_after=6000)
+def test_starred_companies_come_first(logged_in, seeded):
+    logged_in.post("/watch/company/SMCO", headers=HX)
+    html = logged_in.get("/stocks/rows", params={"sort": "ticker"}).text
+    assert html.index(">SMCO<") < html.index(">AAPL<")
+
+
+def test_company_page_lists_insider_and_congress_trades(logged_in, seeded, db):
+    trade = insider_trade(db, "AAPL", buy=False, days_ago=3, plan=True, owned_after=6000)
+    trade.tags = [{"label": "CEO", "points": 20, "public": True}, {"label": "Secret", "points": 5, "public": False}]
+    db.commit()
+    congress_trade(db, "C000127", "AAPL", buy=True)
     html = logged_in.get("/stocks/aapl").text
     assert "Apple Inc." in html
     assert "Timothy D Cook (Chief Executive Officer) sold 4,000 shares at an average of $251.50" in html
-    assert "10b5-1 plan" in html and "holds 6,000 shares afterwards" in html
+    assert "holds 6,000 shares afterwards" in html
+    assert '<span class="tag">CEO</span>' in html and "Secret" not in html
+    assert "Sen. Maria Cantwell</a> (D-WA) bought Apple Inc. · owner: Spouse" in html
+    assert "$15,001 – $50,000" in html
     assert 'href="https://www.sec.gov/Archives/edgar/data/320193/x-index.htm"' in html
 
 
 def test_company_page_empty_and_unknown(logged_in, seeded):
-    assert "No insider buys or sells yet" in logged_in.get("/stocks/XOM").text
+    assert "No buys or sells yet" in logged_in.get("/stocks/XOM").text
     assert logged_in.get("/stocks/NOPE").status_code == 404
+
+
+def test_held_trades_are_marked(logged_in, seeded, db):
+    trade = insider_trade(db, "AAPL", value=60_000_000)
+    trade.needs_review, trade.review_reason = True, "Over $50M: check the filing before alerting"
+    db.commit()
+    assert "Held for review" in logged_in.get("/stocks/AAPL").text
+
+
+def test_politician_page_and_latest_trade_on_card(logged_in, seeded, db):
+    congress_trade(db, "P000197", "NVDA", buy=False, low=1_000_001, high=5_000_000, days_ago=2)
+    card = logged_in.get("/politicians/cards", params={"q": "pelosi"}).text
+    assert ">NVDA<" in card and "$1,000,001 – $5,000,000" in card and "reported 2d ago" in card
+    page = logged_in.get("/politicians/P000197").text
+    assert "Nancy Pelosi" in page and "Representative · Democrat · California, district 11" in page
+    assert "Nvidia" in page
+    assert logged_in.get("/politicians/NOPE").status_code == 404
+
+
+def test_politician_page_marks_led_committees(logged_in, seeded):
+    html = logged_in.get("/politicians/C000127").text
+    assert "Commerce, Science, and Transportation · leads" in html
 
 
 def test_alerts_page_shows_only_my_alerts(logged_in, seeded, db):
@@ -155,14 +192,17 @@ def test_alerts_page_shows_only_my_alerts(logged_in, seeded, db):
     other = User(telegram_id=99, first_name="Other")
     db.add(other)
     db.commit()
-    mine = _add_trade(db, "NVDA", "P", days_ago=1)
-    theirs = _add_trade(db, "XOM", "S", days_ago=1)
+    mine = insider_trade(db, "NVDA", days_ago=1)
+    theirs = insider_trade(db, "XOM", buy=False, days_ago=1)
+    pol = congress_trade(db, "C000127", "LMT")
     db.add_all([
         Alert(user_id=me.id, trade_id=mine.id, status="sent", sent_at=datetime(2026, 9, 26, 11, 2)),
+        Alert(user_id=me.id, trade_id=pol.id, status="failed", error="Couldn't reach Telegram."),
         Alert(user_id=other.id, trade_id=theirs.id, status="sent"),
     ])
     db.commit()
 
     html = logged_in.get("/alerts").text
     assert "NVDA" in html and "Delivered Sep 26, 11:02 AM UTC" in html
+    assert "Lockheed Martin" in html and "Not delivered: Couldn&#39;t reach Telegram." in html
     assert "XOM" not in html

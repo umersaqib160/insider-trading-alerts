@@ -7,7 +7,44 @@
 {% if trade.is_buy %}<span class="pill buy">Buy</span>{% else %}<span class="pill sell">Sell</span>{% endif %}
 {%- endmacro %}
 
+{% macro source_label(trade) -%}
+{{ "SEC Form 4" if trade.is_insider else ("Senate disclosure" if trade.source == "senate" else "House disclosure") }}
+{%- endmacro %}
+
+{% macro trade_who(trade) -%}
+{% if trade.politician %}<a href="/politicians/{{ trade.politician.bioguide_id }}">{{ trade.politician.title }} {{ trade.politician.full_name }}</a> ({{ trade.politician.short_label }})
+{%- else %}{{ trade.actor_name }}{{ " (" ~ trade.actor_role ~ ")" if trade.actor_role }}{% endif %}
+{%- endmacro %}
+
 {% macro trade_summary(trade) -%}
-{{ trade.insider_name }}{{ " (" ~ trade.insider_title ~ ")" if trade.insider_title }} {{ "bought" if trade.is_buy else "sold" }} {{ trade.shares|shares }} shares
-{%- if trade.avg_price %} at an average of ${{ "{:,.2f}".format(trade.avg_price) }}{% endif %}
+{{ trade_who(trade) }} {{ "bought" if trade.is_buy else "sold" }}
+{%- if trade.insider %} {{ trade.insider.shares|shares }} shares{% if trade.insider.avg_price %} at an average of ${{ "{:,.2f}".format(trade.insider.avg_price) }}{% endif %}
+{%- elif trade.congress %} {{ trade.asset_name or trade.ticker }}{% if trade.congress.owner and trade.congress.owner|lower != "self" %} · owner: {{ trade.congress.owner }}{% endif %}
+{%- endif %}
+{%- endmacro %}
+
+{#- One trade in a list. show_asset adds the ticker line (alert history); otherwise the page is already about it. -#}
+{% macro trade_item(trade, today, show_asset=False, status=None) -%}
+<li class="trade{{ ' is-held' if trade.needs_review }}">
+  <div class="trade-top">
+    {{ trade_pill(trade) }}
+    <span class="v">{{ trade|value_label }}</span>
+    <span class="src">{{ source_label(trade) }}</span>
+    {% if trade.needs_review %}<span class="pill neutral" title="{{ trade.review_reason }}">Held for review</span>{% endif %}
+    <span class="when">{% if status %}{{ status }}{% else %}Filed {{ trade.filed_date|short_date }} · {{ trade.filed_date|days_ago(today) }}{% endif %}</span>
+  </div>
+  {% if show_asset %}
+  <p class="trade-head">{% if trade.ticker %}<a class="tick" href="/stocks/{{ trade.ticker|urlencode }}">{{ trade.ticker }}</a> {% endif %}<span class="co">{{ trade.asset_name }}</span></p>
+  {% endif %}
+  <p class="trade-body">{{ trade_summary(trade) }}</p>
+  {% if trade.public_tags %}
+  <p class="tags">{% for tag in trade.public_tags %}<span class="tag">{{ tag }}</span>{% endfor %}</p>
+  {% endif %}
+  <p class="trade-meta">
+    Traded {{ trade.trade_date|short_date }} · {{ "filed" if trade.is_insider else "reported" }}
+    {%- if trade.disclosure_lag_days <= 0 %} the same day{% else %} {{ trade.disclosure_lag_days }} day{{ "" if trade.disclosure_lag_days == 1 else "s" }} later{% endif %}
+    {%- if trade.insider and trade.insider.shares_owned_after is not none %} · holds {{ trade.insider.shares_owned_after|shares }} shares afterwards{% endif %}
+    · <a href="{{ trade.source_url }}" target="_blank" rel="noopener">View filing</a>
+  </p>
+</li>
 {%- endmacro %}

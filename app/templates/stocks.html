@@ -4,12 +4,12 @@
 <div class="view-head">
   <div>
     <h1>Stocks</h1>
-    <p class="sub">S&amp;P 500 · {{ total }} companies. Star a company to get a Telegram alert whenever one of its insiders files a buy or sell on SEC Form 4.</p>
+    <p class="sub">{{ "{:,}".format(total) }} US companies on Nasdaq, NYSE and Cboe. Star a company to get a Telegram alert when one of its insiders files a buy or sell, or a member of Congress reports trading it.</p>
   </div>
   <div class="stat"><span class="stat-n" id="watching-stocks">{{ counts.stocks }}</span><span class="stat-l">watching</span></div>
 </div>
 
-<form class="toolbar" action="/stocks" method="get" role="search"
+<form class="toolbar" id="stock-filters" action="/stocks" method="get" role="search"
   hx-get="/stocks/rows" hx-target="#stock-results" hx-trigger="input delay:250ms, submit" hx-sync="this:replace">
   <label class="search">
     <svg aria-hidden="true"><use href="#i-search"/></svg>
@@ -20,13 +20,14 @@
     {% for s in sectors %}<option value="{{ s }}" {% if s == filters.sector %}selected{% endif %}>{{ s }}</option>{% endfor %}
   </select>
   <select name="sort" aria-label="Sort companies">
-    {% for value, label in [("recent", "Sort: latest insider trade"), ("activity", "Sort: most insider trades"), ("ticker", "Sort: ticker A–Z")] %}
+    {% for value, label in [("recent", "Sort: latest trade"), ("activity", "Sort: most trades"), ("ticker", "Sort: ticker A–Z")] %}
     <option value="{{ value }}" {% if filters.sort == value %}selected{% endif %}>{{ label }}</option>
     {% endfor %}
   </select>
+  <label class="check"><input type="checkbox" name="sp500" value="1" {% if filters.sp500 %}checked{% endif %}> S&amp;P 500</label>
   <label class="check"><input type="checkbox" name="starred" value="1" {% if filters.starred %}checked{% endif %}> Starred only</label>
 </form>
 
 <div id="stock-results">{% include "_stock_rows.html" %}</div>
-<p class="foot">Open-market buys and sells from SEC Form 4, checked daily. Click a ticker to see its insider trades.</p>
+<p class="foot">Insider buys and sells from SEC Form 4 and trades reported by members of Congress (🏛). Click a ticker to see all its trades. Sectors outside the S&amp;P 500 are approximate, based on SEC industry codes.</p>
 {% endblock %}

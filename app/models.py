@@ -37,6 +37,8 @@ def _initials(*parts: str | None) -> str:
     return (words[0][0] + (words[-1][0] if len(words) > 1 else "")).upper()
 
 
+
+
 class User(Base):
     __tablename__ = "users"
 
@@ -47,7 +49,6 @@ class User(Base):
     last_name: Mapped[str | None] = mapped_column(String(128))
     photo_url: Mapped[str | None] = mapped_column(String(512))
     telegram_status: Mapped[str] = mapped_column(String(16), default=TELEGRAM_CONNECTED)
-    include_unverified: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     last_login_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
@@ -62,15 +63,22 @@ class User(Base):
 
 
 class Company(Base):
+    """A US company listed on Nasdaq, NYSE or Cboe, one row per SEC CIK."""
+
     __tablename__ = "companies"
 
     id: Mapped[int] = mapped_column(primary_key=True)
     ticker: Mapped[str] = mapped_column(String(16), unique=True, index=True)
+    other_tickers: Mapped[list[str]] = mapped_column(JSON, default=list)
     cik: Mapped[str | None] = mapped_column(String(10), index=True)
     name: Mapped[str] = mapped_column(String(256))
+    exchange: Mapped[str] = mapped_column(String(16), default="")
     sector: Mapped[str] = mapped_column(String(64), default="")
-    sub_industry: Mapped[str] = mapped_column(String(128), default="")
-    in_sp500: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
+    industry: Mapped[str] = mapped_column(String(128), default="")
+    sic_code: Mapped[int | None] = mapped_column(Integer)
+    industry_checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    listed: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
+    in_sp500: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
 
@@ -87,6 +95,8 @@ class Politician(Base):
     state: Mapped[str] = mapped_column(String(2))
     district: Mapped[int | None] = mapped_column(Integer)
     committees: Mapped[list[str]] = mapped_column(JSON, default=list)
+    # Committees this member chairs or leads for the minority (ranking member).
+    led_committees: Mapped[list[str]] = mapped_column(JSON, default=list)
     active: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
@@ -135,8 +145,12 @@ class PoliticianWatch(Base):
 
 
 SOURCE_FORM4 = "sec_form4"
-CODE_PURCHASE = "P"
-CODE_SALE = "S"
+SOURCE_HOUSE = "house"
+SOURCE_SENATE = "senate"
+CONGRESS_SOURCES = (SOURCE_HOUSE, SOURCE_SENATE)
+
+BUY = "buy"
+SELL = "sell"
 
 ALERT_PENDING = "pending"
 ALERT_SENT = "sent"
@@ -144,38 +158,97 @@ ALERT_FAILED = "failed"
 
 
 class Trade(Base):
-    """One insider's open-market buys or sells in one filing, totalled across its transaction lines."""
+    """What every trade has in common, whoever made it. Source-specific fields live in the detail tables."""
 
     __tablename__ = "trades"
-    __table_args__ = (UniqueConstraint("accession_no", "code", name="uq_trades_accession_code"),)
+    __table_args__ = (UniqueConstraint("source", "external_id", name="uq_trades_source_external_id"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    source: Mapped[str] = mapped_column(String(16), default=SOURCE_FORM4)
-    accession_no: Mapped[str] = mapped_column(String(25), index=True)
-    company_id: Mapped[int | None] = mapped_column(ForeignKey("companies.id", ondelete="CASCADE"), index=True)
-    ticker: Mapped[str] = mapped_column(String(16))
-    insider_name: Mapped[str] = mapped_column(String(256))
-    insider_title: Mapped[str] = mapped_column(String(256), default="")
-    code: Mapped[str] = mapped_column(String(1))
-    shares: Mapped[float] = mapped_column(Float)
-    avg_price: Mapped[float | None] = mapped_column(Float)
-    value: Mapped[float | None] = mapped_column(Float)
-    shares_owned_after: Mapped[float | None] = mapped_column(Float)
-    trade_date: Mapped[date] = mapped_column(Date)
+    source: Mapped[str] = mapped_column(String(16))
+    # Stable id within the source, so re-fetching never stores a trade twice.
+    external_id: Mapped[str] = mapped_column(String(64))
+    company_id: Mapped[int | None] = mapped_column(ForeignKey("companies.id", ondelete="SET NULL"), index=True)
+    politician_id: Mapped[int | None] = mapped_column(ForeignKey("politicians.id", ondelete="SET NULL"), index=True)
+    ticker: Mapped[str] = mapped_column(String(16), default="", index=True)
+    asset_name: Mapped[str] = mapped_column(String(256), default="")
+    actor_name: Mapped[str] = mapped_column(String(256))
+    actor_role: Mapped[str] = mapped_column(String(256), default="")
+    direction: Mapped[str] = mapped_column(String(4))
+    # Insiders report exact amounts (low == high); Congress reports ranges (high may be open-ended).
+    value_low: Mapped[float | None] = mapped_column(Float)
+    value_high: Mapped[float | None] = mapped_column(Float)
+    trade_date: Mapped[date] = mapped_column(Date, index=True)
     filed_date: Mapped[date] = mapped_column(Date, index=True)
-    is_10b5_1: Mapped[bool] = mapped_column(Boolean, default=False)
-    source_url: Mapped[str] = mapped_column(String(512))
+    source_url: Mapped[str] = mapped_column(String(512), default="")
+    score: Mapped[int] = mapped_column(Integer, default=0, index=True)
+    # [{"label": "CEO", "points": 20, "public": true}, ...]
+    tags: Mapped[list[dict]] = mapped_column(JSON, default=list)
+    needs_review: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+    review_reason: Mapped[str | None] = mapped_column(String(256))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
     company: Mapped[Company | None] = relationship()
+    politician: Mapped[Politician | None] = relationship()
+    insider: Mapped["InsiderTradeDetail | None"] = relationship(
+        back_populates="trade", uselist=False, cascade="all, delete-orphan")
+    congress: Mapped["CongressTradeDetail | None"] = relationship(
+        back_populates="trade", uselist=False, cascade="all, delete-orphan")
 
     @property
     def is_buy(self) -> bool:
-        return self.code == CODE_PURCHASE
+        return self.direction == BUY
+
+    @property
+    def is_insider(self) -> bool:
+        return self.source == SOURCE_FORM4
 
     @property
     def disclosure_lag_days(self) -> int:
         return (self.filed_date - self.trade_date).days
+
+    @property
+    def public_tags(self) -> list[str]:
+        return [t["label"] for t in self.tags or [] if t.get("public", True)]
+
+
+class InsiderTradeDetail(Base):
+    """One insider's open-market buys or sells in one Form 4, totalled across its transaction lines."""
+
+    __tablename__ = "insider_trade_details"
+
+    trade_id: Mapped[int] = mapped_column(ForeignKey("trades.id", ondelete="CASCADE"), primary_key=True)
+    accession_no: Mapped[str] = mapped_column(String(25), index=True)
+    transaction_code: Mapped[str] = mapped_column(String(1))
+    shares: Mapped[float] = mapped_column(Float)
+    avg_price: Mapped[float | None] = mapped_column(Float)
+    shares_owned_after: Mapped[float | None] = mapped_column(Float)
+    is_10b5_1: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    trade: Mapped[Trade] = relationship(back_populates="insider")
+
+
+class CongressTradeDetail(Base):
+    __tablename__ = "congress_trade_details"
+
+    trade_id: Mapped[int] = mapped_column(ForeignKey("trades.id", ondelete="CASCADE"), primary_key=True)
+    chamber: Mapped[str] = mapped_column(String(8))
+    owner: Mapped[str] = mapped_column(String(32), default="")
+    amount_range: Mapped[str] = mapped_column(String(64), default="")
+    transaction_type: Mapped[str] = mapped_column(String(32), default="")
+    description: Mapped[str] = mapped_column(String(512), default="")
+
+    trade: Mapped[Trade] = relationship(back_populates="congress")
+
+
+class ProcessedFiling(Base):
+    """A Form 4 already read, whether or not it held a buy or sell, so it is never fetched twice."""
+
+    __tablename__ = "processed_filings"
+
+    accession_no: Mapped[str] = mapped_column(String(25), primary_key=True)
+    filed_date: Mapped[date] = mapped_column(Date, index=True)
+    trades: Mapped[int] = mapped_column(Integer, default=0)
+    processed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
 class Alert(Base):
@@ -193,15 +266,3 @@ class Alert(Base):
 
     user: Mapped[User] = relationship()
     trade: Mapped[Trade] = relationship()
-
-
-class IngestedDay(Base):
-    """A filing index that has been fully processed, so reruns skip it."""
-
-    __tablename__ = "ingested_days"
-
-    source: Mapped[str] = mapped_column(String(16), primary_key=True)
-    day: Mapped[date] = mapped_column(Date, primary_key=True)
-    filings: Mapped[int] = mapped_column(Integer, default=0)
-    trades: Mapped[int] = mapped_column(Integer, default=0)
-    completed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)

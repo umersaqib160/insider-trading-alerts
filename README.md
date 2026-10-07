@@ -1,296 +1,199 @@
 # Behind The Curtain
 
-A web app where users pick the stocks and US politicians they care about, and
-get a Telegram alert whenever one of those company insiders or politicians
-discloses a trade.
+A web app where users star the US companies and members of Congress they
+care about, and get a Telegram alert whenever one of them files a trade.
+Company insider trades come from SEC Form 4 filings; Congress trades come
+from House and Senate periodic transaction reports, via the Quiver API.
 
-## Brand
+> **Scope note:** everything comes from legally mandated public filings.
+> The app reports what was filed, to everyone the same way, and never tells
+> anyone to buy or sell. Every alert carries a "not investment advice" line.
 
-- **Name:** Behind The Curtain
-- **Palette:** `#000000` · `#2A0048` · `#560072` · `#800080` · `#A90072` ·
-  `#D50048` · `#FF0000` (black → violet → purple → magenta → crimson → red)
-- **Themes:** light and dark, plus "match your device". Users switch themes
-  in the header or under Settings → Appearance.
-- **Semantic colors stay separate from the brand:** buys are green, sells
-  are red, and unverified forum signals are amber, so a trade's direction
-  never depends on the brand palette.
-- **UI prototype:** [`prototype/index.html`](prototype/index.html), a
-  clickable mockup that uses example data.
-
-> **Scope note:** Tier 1 signals come only from legally mandated public
-> disclosures — SEC Form 4 filings and STOCK Act Periodic Transaction
-> Reports. Tier 2 signals come from public web/forum discussion and are
-> always labelled as unverified. The app never uses or trades on nonpublic
-> information; it is a monitoring/aggregation tool, in the same category as
-> Capitol Trades, Quiver Quantitative, or Unusual Whales.
+The marketing and automation plan lives in the strategy document
+("Behind the Curtain — Marketing & Automation Strategy"). It's being built
+one step at a time; see [Roadmap](#roadmap).
 
 ## Status
 
-**Phases 1–3 are built:**
-- Telegram login and test notifications
-- The S&P 500 and Congress lists, with starring
-- The daily SEC Form 4 check, which sends a Telegram alert for each insider
-  buy or sell at a starred company
+**Built:** Telegram login and test notifications; watchlists over every US
+company on Nasdaq, NYSE and Cboe (about 6,100) and all of Congress; and the
+**Filing Scout** (strategy step 1), which checks for new trades every 10
+minutes, scores them, and alerts watchers.
 
-Next is Phase 4, alerts for politicians' trades. Deployment to Railway is
-waiting on the bot token and a Railway account.
+**Waiting on you:** a Quiver API key (Congress trades), the Telegram bot
+token, and a Railway account to deploy.
 
-### How the daily check works
+## Filing Scout
 
-`python -m app.cli daily` does four things:
-1. Refreshes the S&P 500 and Congress lists.
-2. Reads EDGAR's daily form index for each weekday it hasn't processed yet,
-   looking back up to 5 days.
-3. Downloads only the Form 4s filed for S&P 500 companies, and keeps the
-   open-market purchases (code `P`) and sales (code `S`). Each filing's
-   transaction lines are totalled into one trade with an average price, and
-   pre-planned Rule 10b5-1 trades are flagged.
-4. Sends one Telegram message per trade to every connected user who starred
-   that company. A failed send is retried up to 3 times. If a user has
-   blocked the bot, their account is marked blocked.
+Code lives in [`app/agents/scout/`](app/agents/scout/).
 
-Each day's index is recorded once processed, so re-running the job never
-sends duplicates. Trades filed more than 7 days ago are stored but don't
-trigger alerts. Use `--no-alerts` to backfill history without sending
-anything.
+**Every 10 minutes** (`python -m app.cli scout`):
+1. **Company insiders:** reads SEC's live feed of new filings, newest first,
+   until it reaches filings it has already read (or an hour of history).
+   Each new Form 4 for a listed company is downloaded and its open-market
+   purchases (code `P`) and sales (code `S`) are kept. Grants, option
+   exercises and tax withholding are skipped. A filing's transaction lines
+   are totalled into one trade with an average price, and pre-planned Rule
+   10b5-1 trades are flagged.
+2. **Congress:** fetches recent House and Senate trades from Quiver,
+   matched to members by their Congress ID (or name) and to companies by
+   ticker. Exchanges are skipped. Without `QUIVER_API_KEY` this step is
+   skipped and the run says so.
+3. **Scores** new trades (below), and re-scores older trades whose cluster
+   counts changed.
+4. **Alerts** every connected user who starred the company or the
+   politician. One Telegram message per trade; failed sends retry up to 3
+   times; trades filed more than 7 days ago are stored but not alerted.
+
+**Every night** (`python -m app.cli nightly`): refreshes the company and
+Congress lists, looks up industry codes for up to 1,000 companies, re-reads
+SEC's end-of-day index for the last 3 business days to catch anything the
+live feed missed, and clears out old bookkeeping.
+
+Everything is idempotent: re-running never stores or sends a trade twice.
+
+### The notable score
+
+Each trade gets a 0–100 score from the points below; **60+ is notable**.
+The score picks what the marketing agents will talk about. It doesn't
+filter anyone's alerts: users get every buy and sell for what they starred.
+All weights are in [`scoring.py`](app/agents/scout/scoring.py).
+
+| Signal | Points |
+|---|---|
+| Size (insiders) | $100K+ 5 · $1M+ 15 · $5M+ 25 · $10M+ 35 |
+| Size (Congress, bottom of range) | $15K+ 5 · $50K+ 15 · $250K+ 25 · $1M+ 35 |
+| Direction | Insider buy 20 · unplanned sale 5 · pre-planned sale 0 · Congress buy 10, sale 5 |
+| Who (insiders) | CEO/CFO/Chair 20 · other officer 10 · director 8 · 10% owner 5 |
+| Who (Congress) | High-profile list 20 · committee chair or ranking member 10 |
+| Committee link | Member sits on a committee overseeing the company's industry: 15 |
+| Cluster | 3+ insiders buying the same company within 14 days: 25 · 2+ members trading the same stock within 14 days: 15 |
+
+The reasons behind each score are stored as tags. Factual ones ("CEO",
+"$5M+", "Sits on Armed Services") are shown to users on trades and in
+alerts; the number itself and the high-profile list stay internal. Edit the
+high-profile list in
+[`app/data/watchlist_politicians.txt`](app/data/watchlist_politicians.txt)
+and check which names match with `python -m app.cli watchlist`.
+
+**Held for review:** trades over $50M, or with values that look wrong
+(trade date after filing, a year-old trade, an impossible share price), are
+stored but not alerted. List them with `python -m app.cli review` and
+release one with `python -m app.cli approve <id>`.
+
+**Weekly hand check:** `python -m app.cli top --days 7` lists the top trades
+with their points, so the weights can be tuned.
 
 ## Running locally
 
 ```bash
 python3 -m venv .venv
 .venv/bin/pip install -r requirements-dev.txt
-cp .env.example .env                  # DEV_LOGIN=true is already set
+cp .env.example .env                  # then set SEC_USER_AGENT
 .venv/bin/alembic upgrade head        # creates dev.db (SQLite)
-.venv/bin/python -m app.cli load-refdata   # S&P 500 + Congress members
+.venv/bin/python -m app.cli load-refdata          # companies + Congress (seconds)
+.venv/bin/python -m app.cli load-industries       # optional: sectors for all companies (~15 min)
+.venv/bin/python -m app.cli nightly --no-alerts --skip-refdata --days 7   # backfill a week
 .venv/bin/uvicorn app.main:app --reload
 ```
 
 Open http://127.0.0.1:8000 and use **Dev login**. Telegram's login widget
 only works on the domain registered with @BotFather, so it can't run on
-localhost. To get real test notifications locally, set `TELEGRAM_BOT_TOKEN`
-and set `DEV_TELEGRAM_ID` to your own Telegram user id. First press Start in
-your chat with the bot, or Telegram won't let the bot message you.
+localhost. To get real alerts locally, set `TELEGRAM_BOT_TOKEN` and set
+`DEV_TELEGRAM_ID` to your own Telegram user id (press Start in your chat
+with the bot first).
 
 Run the tests with `.venv/bin/pytest`.
 
 ## Deploying to Railway
 
 1. Create a Railway project from this GitHub repo and add a **Postgres**
-   database to it. Railway sets `DATABASE_URL` for you.
+   database. Railway sets `DATABASE_URL`.
 2. Set these variables on the web service:
    - `APP_ENV=production`
-   - `SECRET_KEY`: a long random string, e.g. from `python -c "import secrets; print(secrets.token_urlsafe(48))"`
+   - `SECRET_KEY`: a long random string, e.g. `python -c "import secrets; print(secrets.token_urlsafe(48))"`
    - `TELEGRAM_BOT_TOKEN` and `TELEGRAM_BOT_USERNAME` (without the `@`)
    - `SEC_USER_AGENT`, e.g. `Behind The Curtain you@example.com` (SEC
      requires a real contact email)
-3. Deploy. The `Procfile` runs database migrations, then starts the app.
-   `/healthz` is the health check.
-4. Generate a public domain for the service. In @BotFather, send
-   `/setdomain`, pick the bot, and enter that domain so the login widget
-   works there.
-5. Add a second service from the same repo for the daily check:
-   - Start command: `python -m app.cli daily`
-   - Cron schedule: `0 11 * * *` (11:00 UTC, about 7am US Eastern)
-   - The same variables as the web service; reference `DATABASE_URL` from
-     Postgres.
+   - `QUIVER_API_KEY`
+3. Deploy. The `Procfile` runs migrations, then starts the app. `/healthz`
+   is the health check.
+4. Generate a public domain. In @BotFather, send `/setdomain`, pick the bot,
+   and enter that domain so the login widget works.
+5. Add two cron services from the same repo, with the same variables
+   (reference `DATABASE_URL` from Postgres):
+   - **Scout:** start command `python -m app.cli scout`, schedule `*/10 * * * *`
+   - **Nightly:** start command `python -m app.cli nightly`, schedule `0 7 * * *`
+     (07:00 UTC, after SEC publishes the previous day's index)
 
-   The cron service runs, prints a summary, and exits. Run it once by hand
-   with `--no-alerts` first to backfill the last few days without flooding
-   Telegram.
+   Before turning the crons on, run `python -m app.cli load-refdata`,
+   `python -m app.cli load-industries` and
+   `python -m app.cli nightly --no-alerts --days 7` once from a Railway
+   shell, so the first scheduled run doesn't alert on a week of history.
 
-## Product overview
+## Data sources
 
-Single user (the project owner) at first; built multi-user from day one so
-others can sign up later.
+| Data | Source | Cost |
+|---|---|---|
+| Company insider trades | SEC EDGAR live feed + daily index (Form 4) | Free; needs `SEC_USER_AGENT` |
+| Congress trades | Quiver API, live congress trading endpoint | Paid; `QUIVER_API_KEY` |
+| Listed US companies | SEC `company_tickers_exchange.json` (Nasdaq, NYSE, Cboe; OTC excluded) | Free |
+| Sectors and industries | S&P 500 members: official GICS from the [S&P 500 dataset](https://github.com/datasets/s-and-p-500-companies). Everyone else: SEC industry (SIC) codes mapped to the closest sector | Free |
+| Members of Congress | [`unitedstates/congress-legislators`](https://github.com/unitedstates/congress-legislators): members, committees, chairs | Free |
 
-**Stocks** — browse/search the S&P 500 (all US-listed stocks later) and star
-the ones to watch. When an insider (exec, director, 10%+ owner) at a starred
-company files a trade, the user gets an alert.
+**Licensing to check before launch:** that your Quiver plan allows
+commercial use and showing the data publicly; and, with a lawyer, how the
+Ethics in Government Act's limits on commercial use of congressional
+reports apply.
 
-**Politicians** — browse/search current members of Congress (filter by
-chamber, party, state, committee) and star the ones to watch. When a starred
-politician files a trade disclosure, the user gets an alert.
-
-**Alerts / Settings** — Telegram connection status, a **"Send test
-notification"** button, and a history of alerts already sent.
-
-**Sign-in** — "Log in with Telegram". One click signs the user in *and*
-authorizes the bot to message them, so there's no password, no email
-provider, and no chat ID to copy/paste.
-
-## Signal sources
-
-### Tier 1: regulatory disclosures (confirmed)
-
-| Source | Who | Filing | Disclosure window | Access |
-|---|---|---|---|---|
-| SEC Form 4 | Company executives, directors, 10%+ owners | Statement of Changes in Beneficial Ownership | Within 2 business days of trade | SEC EDGAR, free, no key (requires a descriptive `User-Agent`, max 10 req/s) |
-| House PTR | US House Representatives | Periodic Transaction Report | Within 45 days of trade | House Clerk's [Financial Disclosure site](https://disclosures-clerk.house.gov/) (PDF-based, needs parsing) |
-| Senate PTR | US Senators | Periodic Transaction Report | Within 45 days of trade | Senate [eFD system](https://efdsearch.senate.gov/) (session-based search, needs parsing) |
-
-Community-maintained parsers exist for House/Senate PTR data (e.g. the
-House/Senate Stock Watcher projects) — evaluate before parsing PDFs from
-scratch.
-
-Senior executive-branch officials (cabinet etc.) file a different form (OGE
-278-T) — a possible later addition for "policy-influential" people beyond
-Congress.
-
-### Tier 2: unverified web/forum signals
-
-Filings are confirmed but lagging (up to 45 days for politicians). Chatter on
-forums and social media sometimes surfaces the same trades earlier — but it's
-rumor, not disclosure, so it's stored separately and always labelled as such
-in alerts.
-
-- Reddit (official API) — r/wallstreetbets, r/investing, r/SecurityAnalysis
-- StockTwits (public API, ticker-tagged posts)
-- X/Twitter cashtag search (paid API — evaluate cost first)
-- Financial news RSS for "insider buying/selling" coverage
-
-Tier 2 is matched against what users actually watch (starred tickers and
-politicians) rather than crawling blindly — keeps noise down. Official APIs
-are preferred over HTML scraping (more stable, fewer blocks, no ToS issues).
-
-### Reference data
-
-- **S&P 500 constituents** — list of tickers, refreshed monthly (membership
-  changes a few times a year).
-- **Ticker ↔ SEC CIK mapping** — SEC's public `company_tickers.json`, needed
-  to match Form 4 filings to companies.
-- **Members of Congress** — the public-domain
-  [`unitedstates/congress-legislators`](https://github.com/unitedstates/congress-legislators)
-  dataset (names, chamber, party, state, IDs, committees).
-
-## Architecture
-
-Everything runs on **Railway**, deployed from this GitHub repo:
+## Data model
 
 ```
- ┌──────────────────────────── Railway project ────────────────────────────┐
- │                                                                          │
- │  ┌────────────────────────┐          ┌──────────────────────────────┐   │
- │  │  Web service            │          │  Daily job (cron service)     │   │
- │  │  FastAPI + HTMX pages   │          │  runs once/day, then exits    │   │
- │  │  - Telegram login       │          │  1. refresh reference data    │   │
- │  │  - Stocks / Politicians │          │  2. ingest Form 4, PTRs,      │   │
- │  │  - star / unstar        │          │     Tier 2 sources            │   │
- │  │  - test notification    │          │  3. match new trades against  │   │
- │  │  - alert history        │          │     every user's watchlist    │   │
- │  └───────────┬────────────┘          │  4. send + record alerts      │   │
- │              │                        └───────────────┬──────────────┘   │
- │              ▼                                        ▼                   │
- │        ┌──────────────────────────────────────────────────────┐          │
- │        │  Postgres — users, watchlists, trades, rumor signals,│          │
- │        │  alerts sent                                          │          │
- │        └──────────────────────────────────────────────────────┘          │
- └───────────────────────────────────┬──────────────────────────────────────┘
-                                     ▼
-                         Telegram Bot API (sendMessage)
+users                  Telegram identity and connection status
+companies              one row per SEC CIK: ticker (+ other share classes), exchange,
+                       sector, industry, SIC code, S&P 500 flag
+politicians            current members, committees, committees they lead
+company_watches        a user's starred companies
+politician_watches     a user's starred politicians
+trades                 shared fields for every trade: source, who, ticker, buy/sell,
+                       value low/high, trade and filed dates, score, tags, review hold
+insider_trade_details  Form 4 only: accession, shares, average price, 10b5-1 flag
+congress_trade_details House/Senate only: chamber, owner, amount range, description
+processed_filings      Form 4s already read, so none is fetched twice
+alerts                 one per user per trade; doubles as the no-duplicates record
 ```
-
-Third parties: **GitHub** (code), **Railway** (hosting + DB + cron),
-**Telegram** (login + alerts). Tier 2 adds Reddit/StockTwits APIs.
-
-## Data model (draft)
-
-```
-user               id, telegram_user_id, telegram_username, display_name, photo_url,
-                   telegram_status (connected | blocked), created_at
-company            id, ticker, cik, name, sector, in_sp500
-politician         id, bioguide_id, full_name, chamber, party, state, active
-watch_company      user_id, company_id, created_at
-watch_politician   user_id, politician_id, created_at
-
-trade              id, source (sec_form4 | house_ptr | senate_ptr), source_url, filing_id,
-                   company_id?, politician_id?, insider_name, insider_title,
-                   ticker, transaction_type (buy | sell | ...), transaction_code,
-                   shares?, price?, amount_range?, trade_date, filing_date
-rumor_signal       id, platform, post_url, post_date, excerpt,
-                   company_id?, politician_id?, confidence = rumor
-alert              id, user_id, trade_id? | rumor_signal_id?, sent_at, status
-```
-
-`alert` doubles as the dedup record: a user is never sent the same trade twice,
-even if the daily job re-runs.
-
-## Telegram integration
-
-1. **Bot setup (owner, once):** create the bot with @BotFather, then run
-   `/setdomain` pointing at the app's Railway domain (the login widget only
-   works on that registered domain).
-2. **Login:** the site embeds Telegram's Login Widget with
-   `data-request-access="write"`. Telegram returns the user's id, name, and
-   photo plus a signature; the server verifies it (HMAC-SHA256 keyed with
-   SHA-256 of the bot token) before creating the session.
-3. **Sending:** for private chats, the Telegram user id *is* the chat id, so
-   alerts are a direct `sendMessage` call — no `/start` step, no polling or
-   webhook needed for v1.
-4. **Test notification:** a button on the settings page sends a sample alert
-   right away, confirming the connection works.
-5. **Blocked bot:** if Telegram returns 403 (user blocked the bot), mark the
-   user `blocked` and show a "reconnect" prompt in the UI instead of retrying.
-
-Dev note: the login widget won't run on `localhost`, so local development uses
-a dev-only login bypass (disabled in production), and real login is tested on
-the Railway deployment.
 
 ## Tech stack
 
-- **Language:** Python
-- **Web:** FastAPI + Jinja templates + HTMX + Tailwind — one service, one
-  language, one deploy, interactive without a separate JS frontend
-- **Database:** Postgres (Railway), SQLAlchemy + Alembic migrations
-- **Daily job:** same codebase, separate Railway cron service entry point
-- **Ingestion:** `httpx`; `lxml`/`BeautifulSoup` for HTML/XML; PDF parsing for
-  House PTRs where needed
-- **Notifications:** Telegram Bot API over HTTP
+Python · FastAPI + Jinja + HTMX · SQLAlchemy + Alembic · Postgres on Railway
+(SQLite locally) · Telegram Bot API · httpx.
+
+## Brand
+
+- **Name:** Behind The Curtain
+- **Palette:** `#000000` · `#2A0048` · `#560072` · `#800080` · `#A90072` ·
+  `#D50048` · `#FF0000`
+- **Themes:** light, dark, or match the device.
+- **Semantic colors stay separate from the brand:** buys are green, sells
+  red.
+- **UI prototype:** [`prototype/index.html`](prototype/index.html), with example data.
 
 ## Roadmap
 
-- [x] **Phase 0 — Planning**
-- [x] **Phase 1 — Foundation:** FastAPI skeleton, Postgres schema, Railway
-      deploy config, Telegram login, "send test notification". Proves the
-      full path to your phone before any data work. *(First Railway deploy
-      still pending.)*
-- [x] **Phase 2 — Reference data + watchlists:** load S&P 500 and Congress
-      lists; Stocks and Politicians pages with search, filters, star/unstar.
-- [x] **Phase 3 — SEC Form 4 alerts:** daily ingestion, match against starred
-      companies, send alerts, alert history page, per-company trade page.
-- [ ] **Phase 4 — Politician alerts:** House/Senate PTR ingestion, match
-      against starred politicians.
-- [ ] **Phase 5 — Tier 2 signals:** Reddit/StockTwits ingestion, clearly
-      labelled rumor alerts.
-- [ ] **Phase 6 — Open up:** onboarding for other users, all US-listed
-      stocks, executive-branch officials, per-user alert filters.
-- [ ] **Phase 7 — Smarter signals:** cluster buying, unusual size/timing,
-      anomaly scoring.
+Product foundations (done): Telegram login, watchlists, company pages,
+alert history, light and dark themes.
 
-## Decisions
+Strategy build order:
+- [x] **1. Filing Scout:** SEC Form 4 + Quiver Congress trades, notable
+      score, review hold, alerts for starred companies and politicians.
+- [ ] **2. Onboarding Agent:** merchant-of-record checkout and webhooks;
+      Pro on/off; Skool invite.
+- [ ] **3. Content Agent:** X and Reddit drafts from notable trades, via the
+      Claude API, waiting for approval.
+- [ ] **4. Approval step:** Approve/Skip buttons in a private Telegram chat.
+- [ ] **5. Poster Agent:** publishes approved drafts to X with a daily cap.
+- [ ] **6. Teaser and Digest Agents:** free Telegram channel, weekly email.
+- [ ] **7. Analytics Agent:** weekly numbers report.
 
-- **Product:** web app with per-user watchlists of stocks (S&P 500 first)
-  and politicians (Congress first); alerts only for starred items.
-- **Users:** multi-user data model from day one; only the owner uses it
-  initially.
-- **Freshness:** daily batch.
-- **Hosting:** Railway — web service, Postgres, and daily cron job in one
-  project, deployed from GitHub.
-- **Sign-in + Telegram:** "Log in with Telegram" widget with write access,
-  which both authenticates and enables alerts. Replaces the earlier
-  "capture chat_id via polling" plan — no inbound bot handling needed in v1.
-- **Frontend:** Python-only (FastAPI + HTMX + Tailwind).
-- **Signal tiers:** Tier 1 (Form 4, PTRs) confirmed; Tier 2 (web/forum)
-  unverified, stored and labelled separately.
-- **Which trades alert:** buys and sells only. For Form 4 that means
-  open-market purchases and sales (transaction codes `P` and `S`), skipping
-  grants, option exercises, and tax withholding. For PTRs, purchases and
-  sales (full or partial), skipping exchanges.
-- **Alert format:** one Telegram message per trade, no daily digest.
-- **Tier 2 sources:** Reddit and StockTwits only for now. More sources get
-  added once the app is running well and more signal is wanted.
-
-## Open questions
-
-- None blocking Phase 1. Before Phase 5, confirm current API access terms
-  for Reddit and StockTwits, since both have tightened access for new apps
-  in the past.
+Shelved: Reddit/StockTwits rumor signals (they don't fit "report what was
+filed").

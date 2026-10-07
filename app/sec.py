@@ -1,17 +1,21 @@
 """SEC EDGAR access: the daily form index and Form 4 (insider transaction) filings."""
 
+import json
 import re
 import time
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
-from datetime import date
 from collections.abc import Callable
+from datetime import date, datetime
 
 import httpx
 
 EDGAR_BASE = "https://www.sec.gov"
-# SEC's fair-access limit is 10 requests/second; stay comfortably under it.
-MIN_REQUEST_INTERVAL = 0.15
+# SEC's fair-access limit is 10 requests/second, but it also throttles sustained bursts; stay well under.
+MIN_REQUEST_INTERVAL = 0.2
+RETRY_STATUSES = {429, 503}
+RETRY_BACKOFF = (10.0, 30.0, 60.0)
+MAX_RETRY_WAIT = 120.0
 
 _INDEX_LINE = re.compile(
     r"^(?P<form>\S+(?: \S+)*?)\s{2,}(?P<company>.+?)\s+(?P<cik>\d+)\s+(?P<filed>\d{8})\s+(?P<path>edgar/\S+\.txt)\s*$"
@@ -53,6 +57,55 @@ class InsiderTrade:
     is_10b5_1: bool
 
 
+@dataclass(frozen=True)
+class FeedEntry:
+    form: str
+    accession_no: str
+    cik: int
+    role: str  # "Issuer" (the company) or "Reporting" (the insider)
+    filed: date
+    updated: datetime
+
+
+_FEED_TITLE = re.compile(r"^(?P<form>.+?) - .*\((?P<cik>\d{10})\) \((?P<role>\w+)\)\s*$")
+_FEED_FILED = re.compile(r"Filed:</b>\s*(\d{4}-\d{2}-\d{2})")
+_ATOM = {"a": "http://www.w3.org/2005/Atom"}
+
+
+def current_feed_path(start: int = 0, count: int = 100) -> str:
+    """SEC's "latest filings" feed. `type=4` is a prefix filter, so other forms (e.g. 424B2) appear too."""
+    return (f"/cgi-bin/browse-edgar?action=getcurrent&type=4&company=&dateb=&owner=include"
+            f"&start={start}&count={count}&output=atom")
+
+
+def parse_current_feed(xml: str) -> list[FeedEntry]:
+    try:
+        root = ET.fromstring(xml)
+    except ET.ParseError as exc:
+        raise EdgarError("SEC EDGAR returned an unreadable filings feed") from exc
+    entries = []
+    for entry in root.findall("a:entry", _ATOM):
+        title = _FEED_TITLE.match((entry.findtext("a:title", "", _ATOM) or "").strip())
+        entry_id = entry.findtext("a:id", "", _ATOM) or ""
+        updated = entry.findtext("a:updated", "", _ATOM) or ""
+        filed = _FEED_FILED.search(entry.findtext("a:summary", "", _ATOM) or "")
+        if not title or "accession-number=" not in entry_id or not updated:
+            continue
+        try:
+            updated_at = datetime.fromisoformat(updated)
+        except ValueError:
+            continue
+        entries.append(FeedEntry(
+            form=title["form"].strip(),
+            accession_no=entry_id.split("accession-number=", 1)[1].strip(),
+            cik=int(title["cik"]),
+            role=title["role"],
+            filed=date.fromisoformat(filed.group(1)) if filed else updated_at.date(),
+            updated=updated_at,
+        ))
+    return entries
+
+
 def daily_index_path(day: date) -> str:
     quarter = (day.month - 1) // 3 + 1
     return f"/Archives/edgar/daily-index/{day.year}/QTR{quarter}/form.{day:%Y%m%d}.idx"
@@ -78,21 +131,41 @@ class EdgarClient:
         self._clock = clock
         self._last_request = float("-inf")
 
-    def get_text(self, path: str) -> str | None:
-        """Fetch a path under sec.gov. Returns None for 404 (e.g. no index on a holiday)."""
+    def _throttle(self) -> None:
         wait = self._last_request + MIN_REQUEST_INTERVAL - self._clock()
         if wait > 0:
             self._sleep(wait)
         self._last_request = self._clock()
-        try:
-            response = self._http.get(EDGAR_BASE + path, headers=self._headers)
-        except httpx.HTTPError as exc:
-            raise EdgarError(f"Couldn't reach SEC EDGAR for {path}: {exc}") from exc
-        if response.status_code == 404:
+
+    def get_text(self, path: str) -> str | None:
+        """Fetch a sec.gov path or full SEC URL. Returns None for 404 (e.g. no index on a holiday)."""
+        url = path if path.startswith("https://") else EDGAR_BASE + path
+        for attempt, backoff in enumerate((*RETRY_BACKOFF, None)):
+            self._throttle()
+            try:
+                response = self._http.get(url, headers=self._headers)
+            except httpx.HTTPError as exc:
+                raise EdgarError(f"Couldn't reach SEC EDGAR for {path}: {exc}") from exc
+            if response.status_code in RETRY_STATUSES and backoff is not None:
+                # SEC throttles bursts with 429; wait as asked (or back off) and try again.
+                retry_after = response.headers.get("Retry-After", "")
+                self._sleep(min(float(retry_after), MAX_RETRY_WAIT) if retry_after.isdigit() else backoff)
+                continue
+            if response.status_code == 404:
+                return None
+            if response.status_code != 200:
+                raise EdgarError(f"SEC EDGAR returned HTTP {response.status_code} for {path}")
+            return response.text
+        raise AssertionError("unreachable")
+
+    def get_json(self, path: str) -> dict | None:
+        text = self.get_text(path)
+        if text is None:
             return None
-        if response.status_code != 200:
-            raise EdgarError(f"SEC EDGAR returned HTTP {response.status_code} for {path}")
-        return response.text
+        try:
+            return json.loads(text)
+        except ValueError as exc:
+            raise EdgarError(f"SEC EDGAR returned invalid JSON for {path}") from exc
 
 
 def parse_daily_index(text: str) -> list[IndexEntry]:

@@ -1,9 +1,18 @@
-from datetime import date
+from datetime import date, datetime
+from zoneinfo import ZoneInfo
+
+MARKET_TZ = ZoneInfo("America/New_York")
+
+
+def market_today() -> date:
+    return datetime.now(MARKET_TZ).date()
 
 
 def money(value: float | None) -> str:
     if value is None:
         return "—"
+    if value >= 1e12:
+        return f"${value / 1e12:,.1f}T"
     if value >= 1e9:
         return f"${value / 1e9:.1f}B"
     if value >= 1e6:

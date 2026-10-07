@@ -8,6 +8,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from .alerts import value_label
 from .config import Settings
 from .formatting import days_ago, money, shares, short_date
 from .models import CompanyWatch, PoliticianWatch, User
@@ -15,7 +16,8 @@ from .telegram import TelegramClient
 
 APP_DIR = Path(__file__).parent
 templates = Jinja2Templates(directory=APP_DIR / "templates")
-templates.env.filters.update(money=money, shares=shares, short_date=short_date, days_ago=days_ago)
+templates.env.filters.update(money=money, shares=shares, short_date=short_date, days_ago=days_ago,
+                             value_label=value_label)
 
 
 def get_app_settings(request: Request) -> Settings:
