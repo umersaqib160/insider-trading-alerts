@@ -24,34 +24,24 @@ Read this first, then `README.md` (architecture, commands, deploy) and
 - Shelved: Reddit/StockTwits rumor signals.
 
 ## Status (as of Oct 8, 2026)
-- Done: the product foundation, plus **strategy step 1, the Filing Scout**, which was tested on a real week of SEC data. A one-quarter scoring backtest is also done (see the next task).
+- Done: the product foundation, plus **strategy step 1, the Filing Scout**, which was tested on a real week of SEC data. A 13-quarter scoring backtest is also done (see the next task).
 - Review page of last week's top 10: https://claude.ai/artifact/QJQUsi7rUM7DDFXuHTkcMQ
 
-## ▶ NEXT TASK: multi-year scoring backtest, then retune the notable score
-Background: the owner proposed extra points for S&P 500 *buys* by size rank, and we agreed on a stricter
-cluster rule. Before building either, the owner asked to test the scoring against real price moves. A
-one-quarter test (Q1 2026, see `docs/backtest-2026q1.md`) found that the **current score picks worse
-trades than average**. Only buys at the top-200 S&P companies beat their benchmark, and directors beat
-CEOs. One quarter isn't enough to decide, so the plan is:
+## ▶ NEXT TASK: owner approval of new notable-score weights, then implement
+The 13-quarter backtest (2023 Q1 – 2026 Q1) is done: `docs/backtest-2023-2026.md`, owner page
+https://claude.ai/artifact/JMS1ZfwhBrTiKHPcdGKktA. Findings: today's score runs backwards (notable buys rose 54% vs 57%
+for all buys); size points and CEO points hurt; officers/directors and S&P 500 buys help; clusters (old or new rule)
+add nothing; sells predict nothing.
 
-1. **Run the backtest over 12 quarters (2023 Q1 – 2025 Q4) plus 2026 Q1**, following `scripts/backtest/README.md`.
-   Each quarter needs 6 months of prices afterwards, so all of these qualify. Notes:
-   - Run one quarter at a time, and run long downloads in the background; a single command can't run longer than 10 minutes, so re-run the price script until it finishes (it resumes).
-   - The scripts use *today's* list of listed companies, so stocks that were delisted since are missing (survivorship bias); mention this.
-   - Pool all quarters and also show each quarter on its own, so we can see which signals are stable.
-   - **Main measure: the stock against its own price** (did it rise after a buy and fall after a sell?). Show the
-     index-relative view as a secondary check. `analyze.py` prints both views.
-2. **Questions to answer:**
-   - Does each scoring signal help, hurt, or do nothing? The signals are size buckets, buy vs sell, role (CEO/CFO/Chair vs other officers vs directors vs 10% owners), the old and new cluster rules, and pre-planned vs unplanned sales.
-   - Do the S&P tiers work? Test rank 1–100, 101–200 and 201–500 separately.
-   - Does a higher score mean better trades, i.e. do higher score buckets show better outcomes?
-3. **Propose new weights** backed by the results, as a short table plus a page for the owner. The likely direction:
-   - Raise the bonus for the top-200 S&P companies; possibly drop the 201–500 tier.
-   - Soften the CEO points and the size points.
-   - Adopt the new cluster rule: only officers and directors count, each buy must be $10K+, and the bonus is tiered by combined value (under $250K: none; $250K–$1M: +15; $1M+: +25).
-4. **Get the owner's approval first.** Then implement in `app/agents/scout/scoring.py`, update the tests, re-score, update the README's score table, and commit.
-   - The S&P size rank comes from the order of SEC's `company_tickers_exchange.json` (already checked: it follows market value). Store that rank on `companies` in the nightly sync.
-   - Apply the S&P bonus to insider **buys only**, not sells and not Congress trades. Both were agreed with the owner.
+Proposed insider weights (Congress unchanged): buy 30; size 0 (keep the tag as a fact); CEO/CFO/Chair 5; other
+officer 20; director 20; 10% owner 0; S&P rank 1–200 +25 and 201–500 +15 (buys only); cluster +5 flat with the new
+rule (officers/directors, $10K+ each, $250K+ combined); sales 0 (sells never notable). Result: notable buys rose
+65% (62% without hindsight), ~113 notable a quarter. `CANDIDATE` in `scripts/backtest/pool.py` holds these weights.
+
+**Waiting on the owner** for four decisions (on the page): notable becomes mostly S&P 500 buys; fewer notable
+trades (~9 a week); flat +5 cluster instead of the agreed +15/+25 tiers; one +25 tier for ranks 1–200.
+Once approved: implement in `app/agents/scout/scoring.py`, store the S&P size rank on `companies` in the nightly sync
+(order of SEC's `company_tickers_exchange.json`), update the tests, re-score, update the README's score table, commit.
 
 ## Open items
 - **Waiting on owner:** a Quiver API key (also check the plan allows commercial use and public display), the

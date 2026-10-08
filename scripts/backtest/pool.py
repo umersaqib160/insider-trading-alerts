@@ -74,18 +74,22 @@ def pit(t):
 
 
 # ---------- candidate weights (what the proposal would score) ----------
+# The proposal in docs/backtest-2023-2026.md: no size points, officers and directors over CEOs, an S&P 500 bonus
+# for buys, a small flat cluster bonus. Sells score 0 here (the proposal keeps them below the notable line).
 CANDIDATE = {
-    "buy": 25, "unplanned_sale": 0, "planned_sale": 0,
-    "size": [(1e7, 10), (1e6, 8), (1e5, 4)],
-    "role": {"top": 8, "officer": 10, "director": 12, "ten": 0},
-    "sp": {"1-100": 25, "101-200": 25, "201-500": 0, "out": 0},
-    "cluster": {15: 15, 25: 25},
+    "buy": 30, "unplanned_sale": 0, "planned_sale": 0,
+    "size": [],
+    "role": {"top": 5, "officer": 20, "director": 20, "ten": 0},
+    "sp": {"1-100": 25, "101-200": 25, "201-500": 15, "out": 0},
+    "cluster": {15: 5, 25: 5},
 }
 
 
 def candidate_score(t):
     w = CANDIDATE
     s = w["buy"] if t["buy"] else (w["planned_sale"] if t["planned"] else w["unplanned_sale"])
+    if not t["buy"]:
+        return s
     s += next((p for v, p in w["size"] if (t["value"] or 0) >= v), 0)
     s += w["role"][role(t)]
     if t["buy"]:

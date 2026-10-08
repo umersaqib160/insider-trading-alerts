@@ -24,6 +24,18 @@ PYTHONPATH=. .venv/bin/python scripts/backtest/build_trades.py data/backtest/$Q/
 .venv/bin/python scripts/backtest/analyze.py data/backtest/$Q/out
 ```
 
+Several quarters at once (after steps 1–2 for each; make each `out/prices` a symlink to one shared
+`data/backtest/prices` folder so each ticker downloads once):
+
+```bash
+# Public float snapshots for the no-hindsight size check (one file per year, the June before each trade).
+mkdir -p data/backtest/float
+for Y in 2022 2023 2024 2025; do curl -A "Behind The Curtain you@example.com" -o data/backtest/float/CY${Y}Q2I.json \
+  https://data.sec.gov/api/xbrl/frames/dei/EntityPublicFloat/USD/CY${Y}Q2I.json; done
+# Pooled groups, per-quarter stability, a regression of each signal, and score buckets for CANDIDATE weights.
+.venv/bin/python scripts/backtest/pool.py dev.db data/backtest/20*/out
+```
+
 How the analysis works (two views; the stock's own price is the main one):
 - **Entry point:** the close on the first trading day after the filing date, which is when a user could first act on the alert.
 - **Own price (main view):** did the stock rise after a buy, or fall after a sell?
@@ -36,4 +48,5 @@ Notes and caveats:
 - **The S&P size rank** comes from the order of SEC's `company_tickers_exchange.json`, which follows market value. It was checked: NVDA, AAPL, GOOGL, MSFT and AMZN come first.
 - **The fetch scripts** need to restart if a long run gets cut off. They resume where they stopped.
 
-Results so far: [`docs/backtest-2026q1.md`](../../docs/backtest-2026q1.md).
+Results: [`docs/backtest-2023-2026.md`](../../docs/backtest-2023-2026.md) (13 quarters) and
+[`docs/backtest-2026q1.md`](../../docs/backtest-2026q1.md) (the first single-quarter run).
