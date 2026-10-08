@@ -24,9 +24,10 @@ PYTHONPATH=. .venv/bin/python scripts/backtest/build_trades.py data/backtest/$Q/
 .venv/bin/python scripts/backtest/analyze.py data/backtest/$Q/out
 ```
 
-How the analysis works:
+How the analysis works (two views; the stock's own price is the main one):
 - **Entry point:** the close on the first trading day after the filing date, which is when a user could first act on the alert.
-- **Benchmark:** S&P 500 (SPY) for S&P members, Russell 2000 (IWM) for everyone else.
+- **Own price (main view):** did the stock rise after a buy, or fall after a sell?
+- **Benchmark (second view):** the same move minus the S&P 500 (SPY) for S&P members or the Russell 2000 (IWM) for everyone else.
 - **What's reported:** medians and the share of trades that went the right way (the stock beat its benchmark after a buy, or trailed it after a sell).
 
 Notes and caveats:

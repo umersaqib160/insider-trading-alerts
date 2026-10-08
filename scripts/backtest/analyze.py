@@ -1,9 +1,11 @@
-"""Backtest part 3: market-adjusted returns after each alert date, by scoring group.
+"""Backtest part 3: what each stock did after the alert date, by scoring group.
 
 Entry = close of the first trading day after the filing date (when a user could act on the alert).
-Excess return = stock return minus SPY return over the same days. "Right direction" = a buy beat
-SPY, or a sell trailed it. Medians are used because a few small caps move hundreds of percent.
-Usage: python analyze.py <out_dir>
+Two views, both reported in the trade's direction (positive = the price went the way the insider bet):
+  own   - the stock against its own price at entry (main view): did it rise after a buy / fall after a sell?
+  index - the same move minus its benchmark (S&P 500 for S&P members, Russell 2000 otherwise).
+Medians are used because a few small caps move hundreds of percent.
+Usage: python analyze.py <out_dir> [own|index]   (prints both when omitted)
 """
 import bisect
 import json
@@ -27,7 +29,7 @@ def load(ticker):
 spy_days, spy = load("SPY")
 iwm_days, iwm = load("IWM")
 for t in trades:
-    t["ret"] = {}
+    t["ret"], t["own"] = {}, {}
     loaded = load(t["ticker"])
     if not loaded or t["held"]:
         continue
@@ -43,13 +45,15 @@ for t in trades:
         if i + n < len(days) and j + n < len(bench_days) and bench_days[j] == entry_day:
             stock = px[days[i + n]] / px[entry_day] - 1
             market = bench[bench_days[j + n]] / bench[entry_day] - 1
+            t["own"][name] = stock
             t["ret"][name] = stock - market
 
 
-def summary(group):
+def summary(group, view="own"):
+    key = "own" if view == "own" else "ret"
     res = {"n": len(group)}
     for name in HORIZONS:
-        vals = [(t["ret"][name] if t["buy"] else -t["ret"][name]) for t in group if name in t["ret"]]
+        vals = [(t[key][name] if t["buy"] else -t[key][name]) for t in group if name in t[key]]
         if len(vals) < 5:
             res[name] = None
             continue
@@ -103,16 +107,21 @@ groups = {
     "Sells, pre-planned (10b5-1)": [t for t in sells if t["planned"]],
     "Sells, unplanned": [t for t in sells if not t["planned"]],
 }
-results = {name: summary(g) for name, g in groups.items()}
+views = [sys.argv[2]] if len(sys.argv) > 2 else ["own", "index"]
+results = {view: {name: summary(g, view) for name, g in groups.items()} for view in views}
 (out / "results.json").write_text(json.dumps(results, indent=1))
 
-priced = sum(1 for t in trades if t["ret"])
+priced = sum(1 for t in trades if t["own"])
 print(f"trades with prices: {priced} of {len(trades)} (held excluded: {sum(t['held'] for t in trades)})")
-print(f"{'group':58} {'n':>5} | " + " | ".join(f"{h:^20}" for h in HORIZONS))
-print(" " * 64 + " | ".join(f"{'median':>7} {'right':>5} {'n':>5}" for _ in HORIZONS))
-for name, res in results.items():
-    cells = []
-    for h in HORIZONS:
-        r = res[h]
-        cells.append(f"{r['median']*100:+6.1f}% {r['hit']*100:4.0f}% {r['n']:5d}" if r else f"{'—':>20}")
-    print(f"{name:58} {res['n']:5d} | " + " | ".join(cells))
+titles = {"own": "AGAINST ITS OWN PRICE (did it move the way the insider bet?)",
+          "index": "AGAINST ITS BENCHMARK INDEX (S&P 500 or Russell 2000)"}
+for view in views:
+    print(f"\n=== {titles[view]} ===")
+    print(f"{'group':58} {'n':>5} | " + " | ".join(f"{h:^20}" for h in HORIZONS))
+    print(" " * 64 + " | ".join(f"{'median':>7} {'right':>5} {'n':>5}" for _ in HORIZONS))
+    for name, res in results[view].items():
+        cells = []
+        for h in HORIZONS:
+            r = res[h]
+            cells.append(f"{r['median']*100:+6.1f}% {r['hit']*100:4.0f}% {r['n']:5d}" if r else f"{'—':>20}")
+        print(f"{name:58} {res['n']:5d} | " + " | ".join(cells))

@@ -39,6 +39,8 @@ CEOs. One quarter isn't enough to decide, so the plan is:
    - Run one quarter at a time, and run long downloads in the background; a single command can't run longer than 10 minutes, so re-run the price script until it finishes (it resumes).
    - The scripts use *today's* list of listed companies, so stocks that were delisted since are missing (survivorship bias); mention this.
    - Pool all quarters and also show each quarter on its own, so we can see which signals are stable.
+   - **Main measure: the stock against its own price** (did it rise after a buy and fall after a sell?). Show the
+     index-relative view as a secondary check. `analyze.py` prints both views.
 2. **Questions to answer:**
    - Does each scoring signal help, hurt, or do nothing? The signals are size buckets, buy vs sell, role (CEO/CFO/Chair vs other officers vs directors vs 10% owners), the old and new cluster rules, and pre-planned vs unplanned sales.
    - Do the S&P tiers work? Test rank 1–100, 101–200 and 201–500 separately.
