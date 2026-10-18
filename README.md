@@ -42,8 +42,20 @@ Code lives in [`app/agents/scout/`](app/agents/scout/).
 3. **Scores** new trades (below), and re-scores older trades whose cluster
    counts changed.
 4. **Alerts** every connected user who starred the company or the
-   politician. One Telegram message per trade; failed sends retry up to 3
-   times; trades filed more than 7 days ago are stored but not alerted.
+   politician, whatever the score. One Telegram message per trade; failed
+   sends retry up to 3 times; trades filed more than 7 days ago are stored
+   but not alerted.
+
+**Pro alert options** (Settings page; only applied while the user is Pro):
+- *Skip pre-planned sales:* no alerts for 10b5-1 plan sales on starred
+  companies (these are most of the alerts for big tech).
+- *Notable trades from every company:* also get every notable trade (60+),
+  even for unstarred companies, marked "⭐ Notable trade". About 9 a week.
+
+Pro is set by the Onboarding Agent on payment; until then, use
+`python -m app.cli set-pro <telegram-username-or-id>` (add `--off` to undo).
+Each company page also says how often its insiders traded in the last 12
+months, so a quiet star doesn't look broken.
 
 **Every night** (`python -m app.cli nightly`): refreshes the company and
 Congress lists, looks up industry codes for up to 1,000 companies, re-reads

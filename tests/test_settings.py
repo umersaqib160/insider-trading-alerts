@@ -56,3 +56,28 @@ def test_disconnect_pauses_and_blocks_test_sends(logged_in, telegram, db):
 
 def test_unknown_connection_action_is_404(logged_in):
     assert logged_in.post("/settings/telegram/explode", headers=HX).status_code == 404
+
+
+def test_pro_options_are_locked_for_free_users(logged_in, db):
+    html = logged_in.get("/settings").text
+    assert "Skip pre-planned sales" in html and "Notable trades from every company" in html
+    assert html.count("Available on Pro.") == 2
+    response = logged_in.post("/settings/alerts/notable-feed", headers=HX)
+    assert toast_of(response) == "This option is part of Pro."
+    assert _user(db).notable_feed is False
+
+
+def test_pro_users_switch_options(logged_in, db):
+    user = _user(db)
+    user.is_pro = True
+    db.commit()
+    assert "Available on Pro." not in logged_in.get("/settings").text
+    response = logged_in.post("/settings/alerts/skip-planned-sales", headers=HX)
+    assert toast_of(response) == "Pre-planned sales are skipped from now on."
+    assert 'id="pref-skip-planned-sales"' in response.text and " checked" in response.text
+    assert _user(db).skips_planned_sales
+    logged_in.post("/settings/alerts/skip-planned-sales", headers=HX)
+    assert _user(db).skip_planned_sales is False
+    logged_in.post("/settings/alerts/notable-feed", headers=HX)
+    assert _user(db).gets_notable_feed
+    assert logged_in.post("/settings/alerts/explode", headers=HX).status_code == 404

@@ -13,7 +13,7 @@ from .alerts import value_label
 from .config import get_settings
 from .db import get_sessionmaker
 from .formatting import market_today, short_date
-from .models import Politician, Trade
+from .models import Politician, Trade, User
 from .refdata.load import ReferenceDataError, fill_industries, load_reference_data
 from .sec import EdgarClient, EdgarError
 from .telegram import TelegramClient
@@ -138,6 +138,22 @@ def cmd_watchlist(_: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_set_pro(args: argparse.Namespace) -> int:
+    """Turn Pro on or off by hand, until the Onboarding Agent does it on payment."""
+    who = args.user.lstrip("@")
+    with _session() as db:
+        user = db.scalar(select(User).where(User.telegram_id == int(who))) if who.isdigit() else \
+            db.scalar(select(User).where(User.username == who))
+        if user is None:
+            print(f"error: no user with Telegram username or ID {args.user!r} (they need to log in once first)",
+                  file=sys.stderr)
+            return 1
+        user.is_pro = not args.off
+        db.commit()
+        print(f"{user.display_name} is {'now Pro' if user.is_pro else 'no longer Pro'}.")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     logging.getLogger("httpx").setLevel(logging.WARNING)
@@ -171,6 +187,10 @@ def main(argv: list[str] | None = None) -> int:
     approve.add_argument("trade_id", type=int)
     approve.set_defaults(func=cmd_approve)
     commands.add_parser("watchlist", help="Check which high-profile names match current members").set_defaults(func=cmd_watchlist)
+    pro = commands.add_parser("set-pro", help="Turn Pro on (or off with --off) for a user, by Telegram username or ID")
+    pro.add_argument("user")
+    pro.add_argument("--off", action="store_true")
+    pro.set_defaults(func=cmd_set_pro)
 
     args = parser.parse_args(argv)
     try:

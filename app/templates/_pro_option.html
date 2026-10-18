@@ -1,0 +1,12 @@
+{# One Pro alert option on the settings page. Needs: key, opt (title, text, field), user. #}
+<li id="opt-{{ key }}">
+  <div class="txt">
+    <div class="t">{{ opt.title }} <span class="pill pro">Pro</span></div>
+    <p class="d">{{ opt.text }}</p>
+    {% if not user.is_pro %}<p class="d locked">Available on Pro.</p>{% endif %}
+  </div>
+  <input type="checkbox" class="switch" id="pref-{{ key }}" role="switch" aria-label="{{ opt.title }}"
+    {%- if user.is_pro and user[opt.field] %} checked{% endif %}
+    {%- if user.is_pro %} hx-post="/settings/alerts/{{ key }}" hx-trigger="change" hx-target="#opt-{{ key }}" hx-swap="outerHTML"
+    {%- else %} disabled{% endif %}>
+</li>

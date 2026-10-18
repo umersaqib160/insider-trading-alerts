@@ -51,6 +51,19 @@ class User(Base):
     telegram_status: Mapped[str] = mapped_column(String(16), default=TELEGRAM_CONNECTED)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     last_login_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    # Set by the Onboarding Agent on payment (or by hand: python -m app.cli set-pro).
+    is_pro: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Pro alert options. Stored even after a downgrade, but only applied while is_pro is on.
+    skip_planned_sales: Mapped[bool] = mapped_column(Boolean, default=False)
+    notable_feed: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    @property
+    def skips_planned_sales(self) -> bool:
+        return self.is_pro and self.skip_planned_sales
+
+    @property
+    def gets_notable_feed(self) -> bool:
+        return self.is_pro and self.notable_feed
 
     @property
     def display_name(self) -> str:
@@ -159,6 +172,9 @@ SELL = "sell"
 ALERT_PENDING = "pending"
 ALERT_SENT = "sent"
 ALERT_FAILED = "failed"
+# Why a user got an alert: a company or politician they starred, or the Pro notable feed.
+ALERT_STARRED = "starred"
+ALERT_NOTABLE = "notable"
 
 
 class Trade(Base):
@@ -263,6 +279,7 @@ class Alert(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     trade_id: Mapped[int] = mapped_column(ForeignKey("trades.id", ondelete="CASCADE"), index=True)
     status: Mapped[str] = mapped_column(String(16), default=ALERT_PENDING, index=True)
+    reason: Mapped[str] = mapped_column(String(16), default=ALERT_STARRED)
     attempts: Mapped[int] = mapped_column(Integer, default=0)
     error: Mapped[str | None] = mapped_column(String(256))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)

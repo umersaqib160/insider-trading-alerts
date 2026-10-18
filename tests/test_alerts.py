@@ -5,7 +5,7 @@ from sqlalchemy import select
 from app.alerts import MAX_SEND_ATTEMPTS, create_alerts, format_trade_message, send_pending_alerts
 from app.formatting import market_today
 from app.models import (
-    ALERT_FAILED, ALERT_SENT, TELEGRAM_BLOCKED, TELEGRAM_DISCONNECTED,
+    ALERT_FAILED, ALERT_NOTABLE, ALERT_SENT, ALERT_STARRED, TELEGRAM_BLOCKED, TELEGRAM_DISCONNECTED,
     Alert, Company, CompanyWatch, Politician, PoliticianWatch, User,
 )
 from app.telegram import TelegramSendError
@@ -13,8 +13,8 @@ from app.telegram import TelegramSendError
 from .factories import congress_trade, insider_trade
 
 
-def add_user(db, telegram_id: int, *, companies=(), politicians=(), status: str = "connected") -> User:
-    user = User(telegram_id=telegram_id, first_name=f"User{telegram_id}", telegram_status=status)
+def add_user(db, telegram_id: int, *, companies=(), politicians=(), status: str = "connected", **options) -> User:
+    user = User(telegram_id=telegram_id, first_name=f"User{telegram_id}", telegram_status=status, **options)
     db.add(user)
     db.commit()
     for ticker in companies:
@@ -90,6 +90,48 @@ def test_held_and_stale_trades_are_not_alerted(db, seeded):
     stale = insider_trade(db, "AAPL", days_ago=10)
     db.commit()
     assert create_alerts(db, [held, stale], market_today()) == 0
+
+
+# ---------- Pro options ----------
+
+def _reasons(db) -> dict[tuple[int, int], str]:
+    return {(a.user_id, a.trade_id): a.reason for a in db.scalars(select(Alert))}
+
+
+def test_pro_users_can_skip_pre_planned_sales(db, seeded):
+    skipper = add_user(db, 1, companies=["AAPL"], is_pro=True, skip_planned_sales=True)
+    lapsed = add_user(db, 2, companies=["AAPL"], is_pro=False, skip_planned_sales=True)  # option kept, not applied
+    everything = add_user(db, 3, companies=["AAPL"], is_pro=True)
+    planned = insider_trade(db, "AAPL", buy=False, plan=True)
+    unplanned = insider_trade(db, "AAPL", buy=False)
+    create_alerts(db, [planned, unplanned], market_today())
+    assert set(_reasons(db)) == {(skipper.id, unplanned.id), (lapsed.id, planned.id), (lapsed.id, unplanned.id),
+                                 (everything.id, planned.id), (everything.id, unplanned.id)}
+
+
+def test_notable_feed_reaches_pro_users_beyond_their_stars(db, seeded):
+    feed = add_user(db, 1, is_pro=True, notable_feed=True)
+    starred_feed = add_user(db, 2, companies=["AAPL"], is_pro=True, notable_feed=True)
+    add_user(db, 3, is_pro=False, notable_feed=True)  # not Pro: no feed
+    add_user(db, 4, is_pro=True, notable_feed=True, status=TELEGRAM_DISCONNECTED)
+    notable = insider_trade(db, "AAPL", role="Director")
+    notable.score = 75
+    quiet = insider_trade(db, "SMCO", role="Director")
+    quiet.score = 50
+    db.commit()
+    create_alerts(db, [notable, quiet], market_today())
+    assert _reasons(db) == {(feed.id, notable.id): ALERT_NOTABLE, (starred_feed.id, notable.id): ALERT_STARRED}
+
+
+def test_notable_alert_says_where_it_came_from(db, seeded, telegram):
+    add_user(db, 9, is_pro=True, notable_feed=True)
+    trade = insider_trade(db, "AAPL", role="Director")
+    trade.score = 75
+    db.commit()
+    create_alerts(db, [trade], market_today())
+    send_pending_alerts(db, telegram)
+    assert telegram.sent[0][1].splitlines()[0] == "⭐ <b>Notable trade</b> · from your Pro notable feed"
+    assert "Notable trade" not in format_trade_message(trade)
 
 
 # ---------- delivery ----------

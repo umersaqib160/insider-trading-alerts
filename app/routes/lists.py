@@ -7,8 +7,8 @@ from sqlalchemy.orm import Session, selectinload
 
 from ..auth import current_user
 from ..db import get_db
-from ..formatting import market_today
-from ..models import STATE_NAMES, Alert, Company, CompanyWatch, Politician, PoliticianWatch, Trade, User
+from ..formatting import market_today, short_date
+from ..models import SOURCE_FORM4, STATE_NAMES, Alert, Company, CompanyWatch, Politician, PoliticianWatch, Trade, User
 from ..web import render, watch_counts
 
 router = APIRouter()
@@ -43,6 +43,34 @@ def _latest_trades(db: Session, column, ids: set[int], since: date) -> dict[int,
         entry = activity.setdefault(getattr(trade, column.key), {"latest": trade, "buys": 0, "sells": 0})
         entry["buys" if trade.is_buy else "sells"] += 1
     return activity
+
+
+def _plural(n: int, word: str) -> str:
+    return f"{n} {word}{'' if n == 1 else 's'}"
+
+
+def company_activity(db: Session, company: Company, today: date) -> str:
+    """One plain sentence on how often this company's insiders (and Congress) trade, so a quiet star
+    doesn't look broken. Counts the last 12 months, or since tracking began if that's more recent."""
+    since = today - timedelta(days=365)
+    started = db.scalar(select(func.min(Trade.filed_date)).where(Trade.source == SOURCE_FORM4))
+    period = "In the last 12 months"
+    if started and started > since:
+        since, period = started, f"Since tracking began on {short_date(started)}"
+    trades = db.execute(select(Trade.source, Trade.direction).where(
+        or_(Trade.company_id == company.id, Trade.ticker == company.ticker), Trade.filed_date >= since)).all()
+    insider = [d for src, d in trades if src == SOURCE_FORM4]
+    congress = len(trades) - len(insider)
+    if not trades:
+        return (f"{period}: no insider or Congress buys or sells. "
+                f"A star on {company.ticker} may stay quiet for a long time.")
+    buys = sum(d == "buy" for d in insider)
+    text = f"{period}: {_plural(len(insider), 'insider trade')}"
+    if insider:
+        text += f" ({_plural(buys, 'buy')}, {_plural(len(insider) - buys, 'sell')})"
+    if congress:
+        text += f" and {_plural(congress, 'trade')} by members of Congress"
+    return text + "."
 
 
 # ---------- stocks ----------
@@ -125,8 +153,9 @@ def company_page(request: Request, ticker: str, db: Session = Depends(get_db), u
         select(Trade).where(or_(Trade.company_id == company.id, Trade.ticker == company.ticker))
         .options(*TRADE_DETAILS).order_by(Trade.filed_date.desc(), Trade.id.desc()).limit(TRADE_LIST_LIMIT)
     ).all()
+    today = market_today()
     return render(request, "company.html", {
-        "company": company, "trades": trades, "today": market_today(),
+        "company": company, "trades": trades, "today": today, "activity": company_activity(db, company, today),
         "starred": db.get(CompanyWatch, (user.id, company.id)) is not None,
         "user": user, "counts": watch_counts(db, user), "active": "stocks",
     })

@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from .formatting import money, shares, short_date
 from .models import (
-    ALERT_FAILED, ALERT_PENDING, ALERT_SENT, TELEGRAM_BLOCKED, TELEGRAM_CONNECTED,
+    ALERT_FAILED, ALERT_NOTABLE, ALERT_PENDING, ALERT_SENT, ALERT_STARRED, TELEGRAM_BLOCKED, TELEGRAM_CONNECTED,
     Alert, CompanyWatch, PoliticianWatch, Trade, User, utcnow,
 )
 from .telegram import TelegramClient, TelegramSendError
@@ -45,12 +45,14 @@ def _who(trade: Trade) -> str:
     return escape(who)
 
 
-def format_trade_message(trade: Trade) -> str:
+def format_trade_message(trade: Trade, reason: str = ALERT_STARRED) -> str:
     """The Telegram alert. HTML parse mode; every value from a filing is escaped."""
     direction = "🟢 BUY" if trade.is_buy else "🔴 SELL"
     icon = "🏢" if trade.is_insider else "🏛"
     ticker = escape(trade.ticker) if trade.ticker else "—"
     lines = [f"{icon} <b>{direction} · {ticker}</b> — {escape(trade.asset_name or trade.ticker)}", f"👤 {_who(trade)}"]
+    if reason == ALERT_NOTABLE:
+        lines.insert(0, "⭐ <b>Notable trade</b> · from your Pro notable feed")
 
     if trade.is_insider and trade.insider:
         detail = f"💵 <b>{value_label(trade)}</b> · {shares(trade.insider.shares)} shares"
@@ -93,16 +95,35 @@ def _watchers(db: Session, trade: Trade) -> list[User]:
     return db.scalars(select(User).where(or_(*conditions), User.telegram_status == TELEGRAM_CONNECTED)).all()
 
 
+def _is_planned_sale(trade: Trade) -> bool:
+    return not trade.is_buy and trade.insider is not None and trade.insider.is_10b5_1
+
+
+def _notable_feed_users(db: Session) -> list[User]:
+    return db.scalars(select(User).where(
+        User.is_pro.is_(True), User.notable_feed.is_(True), User.telegram_status == TELEGRAM_CONNECTED)).all()
+
+
 def create_alerts(db: Session, trades: list[Trade], today: date) -> int:
-    """Queue one alert per connected user who starred the company or the politician behind each recent trade."""
+    """Queue alerts for each recent trade: for connected users who starred the company or politician (minus
+    pre-planned sales for Pro users who skip them), and for Pro users on the notable feed if the trade is notable."""
+    from .agents.scout.scoring import NOTABLE_THRESHOLD  # imported here: the scout package imports this module
+
     cutoff = today - timedelta(days=ALERT_MAX_AGE_DAYS)
     created = 0
+    feed_users = None
     for trade in trades:
         if trade.needs_review or trade.filed_date < cutoff:
             continue
-        for user in _watchers(db, trade):
-            if db.scalar(select(Alert.id).where(Alert.user_id == user.id, Alert.trade_id == trade.id)) is None:
-                db.add(Alert(user_id=user.id, trade_id=trade.id))
+        recipients = {u.id: ALERT_STARRED for u in _watchers(db, trade)
+                      if not (u.skips_planned_sales and _is_planned_sale(trade))}
+        if trade.score >= NOTABLE_THRESHOLD:
+            feed_users = _notable_feed_users(db) if feed_users is None else feed_users
+            for user in feed_users:
+                recipients.setdefault(user.id, ALERT_NOTABLE)  # starred wins: it's their own company
+        for user_id, reason in recipients.items():
+            if db.scalar(select(Alert.id).where(Alert.user_id == user_id, Alert.trade_id == trade.id)) is None:
+                db.add(Alert(user_id=user_id, trade_id=trade.id, reason=reason))
                 created += 1
     db.commit()
     return created
@@ -124,7 +145,7 @@ def send_pending_alerts(db: Session, telegram: TelegramClient) -> DispatchResult
             continue
         alert.attempts += 1
         try:
-            telegram.send_message(alert.user.telegram_id, format_trade_message(alert.trade))
+            telegram.send_message(alert.user.telegram_id, format_trade_message(alert.trade, alert.reason))
         except TelegramSendError as exc:
             alert.status = ALERT_FAILED
             alert.error = exc.message[:256]

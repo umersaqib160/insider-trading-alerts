@@ -5,7 +5,7 @@
 <div class="view-head">
   <div>
     <h1>Alerts</h1>
-    <p class="sub">Every alert for the companies and politicians you've starred, newest first.</p>
+    <p class="sub">Every alert for the companies and politicians you've starred, plus notable trades if you get them with Pro. Newest first.</p>
   </div>
 </div>
 {% if alerts %}
@@ -14,6 +14,7 @@
     {% if alert.status == "sent" %}{% set status = "Delivered " ~ alert.sent_at.strftime("%b %-d, %-I:%M %p") ~ " UTC" %}
     {% elif alert.status == "failed" %}{% set status = "Not delivered" ~ (": " ~ alert.error if alert.error else "") %}
     {% else %}{% set status = "Waiting to send" %}{% endif %}
+    {% if alert.reason == "notable" %}{% set status = "⭐ Notable trade · " ~ status %}{% endif %}
     {{ trade_item(alert.trade, today, show_asset=True, status=status) }}
   {% endfor %}
 </ul>

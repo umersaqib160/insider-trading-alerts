@@ -300,6 +300,7 @@ select { padding-right: 8px; cursor: pointer; max-width: 100%; }
 .pill.sell { color: var(--sell); background: var(--sell-soft); }
 .pill.rumor { color: var(--rumor); background: var(--rumor-soft); }
 .pill.neutral { color: var(--muted); background: var(--surface-2); }
+.pill.pro { color: var(--accent); background: var(--accent-soft); }
 
 .notice { border: 1px solid var(--line-strong); background: var(--surface); border-radius: 10px; padding: 12px 14px; font-size: 14px; }
 .notice.error { border-color: color-mix(in srgb, var(--sell) 45%, transparent); background: var(--sell-soft); color: var(--ink); }
@@ -401,6 +402,8 @@ td.c-sector, td.c-sub { color: var(--muted); font-size: 14px; }
 .switch:checked::after { transform: translateX(16px); }
 .switch:disabled { opacity: 0.55; cursor: not-allowed; }
 .fine { color: var(--muted); font-size: 13px; }
+.activity { margin-top: 8px; font-weight: 600; }
+.prefs .d.locked { font-weight: 600; color: var(--accent); }
 .dl { display: grid; grid-template-columns: auto 1fr; gap: 10px 20px; margin: 14px 0 0; font-size: 14px; }
 .dl dt { color: var(--muted); }
 .dl dd { margin: 0; font-weight: 500; }

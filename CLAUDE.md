@@ -40,6 +40,14 @@ Expect about 9 notable insider trades a week.
 ($1M+ by officers/directors, clusters, Congress purchases), plus fact-checked follow-ups ("up 30% since we sent
 this"). Rules are in `docs/marketing-strategy.md` under "What the X account posts".
 
+## Pro alert options (done, Oct 2026)
+Owner's call: starred companies always alert on every trade (the score never filters them). Pro users get two
+options in Settings: **skip pre-planned sales** and **notable trades from every company** (alerts marked
+"⭐ Notable trade", `alerts.reason = "notable"`). Both are stored on `users` and only apply while `is_pro` is on.
+`is_pro` is set by hand with `python -m app.cli set-pro <user>` until the Onboarding Agent sets it on payment.
+Company pages show "In the last 12 months: N insider trades (x buys, y sells)", or "since tracking began" until
+there's a year of history.
+
 ## ▶ NEXT TASK
 Strategy step 2, the Onboarding Agent (see Open items), once the payment provider approves the product.
 

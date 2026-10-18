@@ -16,7 +16,7 @@
 
     <section class="panel" aria-labelledby="pref-h">
       <h2 id="pref-h">What you get alerted about</h2>
-      <p class="sub">Applies to every company and politician you star.</p>
+      <p class="sub">For every company and politician you star.</p>
       <ul class="prefs">
         <li>
           <div class="txt"><div class="t">Buys <span class="pill buy">Buy</span></div><p class="d">Open-market purchases by company insiders (Form 4 code P) and purchases disclosed by politicians.</p></div>
@@ -26,8 +26,16 @@
           <div class="txt"><div class="t">Sells <span class="pill sell">Sell</span></div><p class="d">Open-market sales by company insiders (Form 4 code S) and full or partial sales disclosed by politicians.</p></div>
           <input type="checkbox" class="switch" id="pref-sells" role="switch" checked disabled aria-label="Sells (always on)">
         </li>
+        {% with key="skip-planned-sales", opt=pro_options["skip-planned-sales"] %}{% include "_pro_option.html" %}{% endwith %}
       </ul>
-      <p class="fine">Stock grants, option exercises and shares withheld for tax are skipped. Buys and sells can't be turned off yet. Starring a company also covers members of Congress trading it.</p>
+      <p class="fine">Stock grants, option exercises and shares withheld for tax are skipped. Starring a company also covers members of Congress trading it.</p>
+    </section>
+
+    <section class="panel" aria-labelledby="notable-h">
+      <h2 id="notable-h">Beyond your stars</h2>
+      <ul class="prefs">
+        {% with key="notable-feed", opt=pro_options["notable-feed"] %}{% include "_pro_option.html" %}{% endwith %}
+      </ul>
     </section>
 
     <section class="panel" aria-labelledby="del-h">

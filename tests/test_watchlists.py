@@ -2,6 +2,7 @@ from datetime import datetime
 
 from sqlalchemy import func, select
 
+from app.formatting import short_date
 from app.models import Alert, CompanyWatch, PoliticianWatch, User
 
 from .conftest import HX, login_params, toast_of
@@ -158,6 +159,22 @@ def test_company_page_lists_insider_and_congress_trades(logged_in, seeded, db):
     assert "Sen. Maria Cantwell</a> (D-WA) bought Apple Inc. · owner: Spouse" in html
     assert "$15,001 – $50,000" in html
     assert 'href="https://www.sec.gov/Archives/edgar/data/320193/x-index.htm"' in html
+
+
+def test_company_page_says_how_often_insiders_trade(logged_in, seeded, db):
+    insider_trade(db, "AAPL", buy=True, days_ago=200)
+    insider_trade(db, "AAPL", buy=False, days_ago=3)
+    insider_trade(db, "AAPL", buy=False, days_ago=400)  # over a year ago: not counted
+    congress_trade(db, "C000127", "AAPL", buy=True)
+    assert "In the last 12 months: 2 insider trades (1 buy, 1 sell) and 1 trade by members of Congress." \
+        in logged_in.get("/stocks/AAPL").text
+
+
+def test_company_page_counts_since_tracking_began(logged_in, seeded, db):
+    first = insider_trade(db, "NVDA", days_ago=20)
+    html = logged_in.get("/stocks/XOM").text
+    assert f"Since tracking began on {short_date(first.filed_date)}: no insider or Congress buys or sells." in html
+    assert "A star on XOM may stay quiet for a long time." in html
 
 
 def test_company_page_empty_and_unknown(logged_in, seeded):
