@@ -45,7 +45,9 @@ Strategy step 2, the Onboarding Agent (see Open items), once the payment provide
 
 ## Open items
 - **Waiting on owner:** a Quiver API key (also check the plan allows commercial use and public display), the
-  Telegram bot token and username, a Railway account, and a real contact email for `SEC_USER_AGENT`.
+  Telegram bot token and username, and a Railway account.
+- `SEC_USER_AGENT` is `Behind The Curtain umersaqib160@hotmail.com` (set it as a Railway variable too).
+- Checked Oct 18, 2026: the full Scout (migrations 0001–0004, refdata, backfill) runs on Postgres 16, not just SQLite.
 - **Unverified until the Quiver key arrives:** Quiver field names and auth header (`Authorization: Token <key>`)
   in `app/agents/scout/congress.py`. Check them against a real response.
 - **Legal (for a lawyer):** commercial use of congressional reports (Ethics in Government Act); EU/Belgium rules
