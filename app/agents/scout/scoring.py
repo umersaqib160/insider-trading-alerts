@@ -13,6 +13,7 @@ at S&P 500 companies did best; trade size, CEO titles, clusters and sells
 predicted little, so they score low or zero but still show as fact tags.
 """
 
+import re
 from dataclasses import dataclass
 from datetime import timedelta
 from pathlib import Path
@@ -125,11 +126,12 @@ def _size_tag(value: float | None, scale) -> dict | None:
 
 def _role_tag(title: str) -> dict | None:
     lowered = f" {title.lower()} "
-    if "chief executive" in lowered or " ceo" in lowered:
+    # Word boundaries so "Co-CEO" counts as CEO; "COB" is chair of the board.
+    if "chief executive" in lowered or re.search(r"\bceo\b", lowered):
         return _tag("CEO", ROLE_TOP)
-    if "chief financial" in lowered or " cfo" in lowered:
+    if "chief financial" in lowered or re.search(r"\bcfo\b", lowered):
         return _tag("CFO", ROLE_TOP)
-    if "chair" in lowered and "vice chair" not in lowered:
+    if ("chair" in lowered and "vice chair" not in lowered) or re.search(r"\bcob\b", lowered):
         return _tag("Chair", ROLE_TOP)
     officer_parts = [p.strip() for p in title.split(",") if p.strip() and p.strip() not in ("Director", "10% Owner")]
     if officer_parts:

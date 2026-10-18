@@ -102,7 +102,8 @@ def test_committee_leader_and_congress_cluster(db, seeded):
 
 def test_role_detection(db, seeded):
     cases = {"Chief Financial Officer": "CFO", "Chairman of the Board": "Chair", "EVP, General Counsel": "Senior officer",
-             "Director, 10% Owner": "Director", "10% Owner": "10% owner", "Vice Chair": "Senior officer"}
+             "Director, 10% Owner": "Director", "10% Owner": "10% owner", "Vice Chair": "Senior officer",
+             "Co-COB and Co-CEO, Director": "CEO", "EVP & CFO": "CFO", "COB": "Chair", "Chief Commercial Officer": "Senior officer"}
     for role, label in cases.items():
         trade = insider_trade(db, "AAPL", buy=False, value=10, role=role)
         score_trades(db, [trade], watchlist=set())
