@@ -17,34 +17,61 @@ def test_planned_director_sale_is_not_notable_but_is_held(db, seeded):
     # Henry Samueli (Director), Broadcom: pre-planned sale of $250M.
     trade = insider_trade(db, "AAPL", buy=False, value=250_000_000, role="Director", plan=True)
     score_trades(db, [trade], watchlist=set())
-    assert trade.score == 43  # size 35 + planned sale 0 + director 8
-    assert _labels(trade) == {"$10M+": 35, "Pre-planned sale": 0, "Director": 8}
+    assert trade.score == 20  # size 0 + planned sale 0 + director 20; no S&P points on sales
+    assert _labels(trade) == {"$10M+": 0, "Pre-planned sale": 0, "Director": 20}
     assert trade.needs_review and trade.review_reason.startswith("Over $50M")
 
 
-def test_ten_percent_owner_buy_is_notable(db, seeded):
-    # Berkshire Hathaway buying $136M of Lennar as a 10% owner.
+def test_sales_are_never_notable(db, seeded):
+    trade = insider_trade(db, "NVDA", buy=False, value=40_000_000, role="President and CEO")
+    score_trades(db, [trade], watchlist=set())
+    assert trade.score == 5 and trade.score < NOTABLE_THRESHOLD  # unplanned sale 0 + CEO 5
+    assert trade.public_tags == ["$10M+", "Unplanned sale", "CEO"]
+
+
+def test_director_buy_at_a_top_200_sp500_company_is_notable(db, seeded):
+    trade = insider_trade(db, "AAPL", buy=True, value=500_000, role="Director", name="Jane Director")
+    score_trades(db, [trade], watchlist=set())
+    assert trade.score == 75  # buy 30 + director 20 + S&P top 200 25
+    assert trade.public_tags == ["$100K+", "Director", "S&P 500"]  # "Open-market buy" is internal
+
+
+def test_sp500_tiers_and_buys_outside_the_index(db, seeded):
+    lower = insider_trade(db, "LMT", buy=True, value=200_000, role="EVP, Operations")  # S&P rank 250
+    outside = insider_trade(db, "SMCO", buy=True, value=5_000_000, role="EVP, Operations")
+    ceo = insider_trade(db, "NVDA", buy=True, value=2_000_000, role="President and CEO")
+    score_trades(db, [lower, outside, ceo], watchlist=set())
+    assert lower.score == 65  # 30 + officer 20 + S&P 201-500 15
+    assert outside.score == 50 and outside.score < NOTABLE_THRESHOLD  # size earns nothing
+    assert ceo.score == 60  # 30 + CEO 5 + top 200 25
+
+
+def test_ten_percent_owner_buy_is_not_notable(db, seeded):
+    # Berkshire Hathaway buying $136M as a 10% owner: a fact worth showing, but 10% owners don't predict moves.
     trade = insider_trade(db, "AAPL", buy=True, value=136_000_000, role="10% Owner", name="Berkshire Hathaway Inc")
     score_trades(db, [trade], watchlist=set())
-    assert trade.score == 60 and trade.score >= NOTABLE_THRESHOLD
-    assert trade.public_tags == ["$10M+", "10% owner"]  # "Open-market buy" is internal; the pill already says Buy
+    assert trade.score == 55  # 30 + 10% owner 0 + S&P top 200 25
+    assert trade.public_tags == ["$10M+", "10% owner", "S&P 500"]
 
 
-def test_ceo_buy_with_a_cluster_scores_80(db, seeded):
-    others = [insider_trade(db, "NVDA", buy=True, value=300_000, role="Director", name=n) for n in ("A Director", "B Director")]
-    ceo = insider_trade(db, "NVDA", buy=True, value=2_000_000, role="President and CEO")
-    score_trades(db, others + [ceo], watchlist=set())
-    assert ceo.score == 80  # 15 + 20 + 20 + 25
-    assert "3 insiders buying within 14 days" in ceo.public_tags
-
-
-def test_earlier_trades_are_rescored_when_a_cluster_forms(db, seeded):
-    first = insider_trade(db, "NVDA", buy=True, value=300_000, role="Director", name="A")
+def test_cluster_of_officers_and_directors_adds_5(db, seeded):
+    first = insider_trade(db, "SMCO", buy=True, value=100_000, role="Director", name="A")
     score_trades(db, [first], watchlist=set())
-    assert first.score == 33  # 5 + 20 + 8
-    later = [insider_trade(db, "NVDA", buy=True, value=300_000, role="Director", name=n) for n in ("B", "C")]
+    assert first.score == 50
+    later = [insider_trade(db, "SMCO", buy=True, value=100_000, role="Director", name=n) for n in ("B", "C")]
     score_trades(db, later, watchlist=set())
-    assert first.score == 58  # gained the 25-point cluster
+    assert first.score == 55  # earlier trades are re-scored when a cluster forms ($300K combined)
+    assert "3 insiders buying within 14 days" in first.public_tags
+
+
+def test_cluster_ignores_token_buys_owners_and_small_totals(db, seeded):
+    token = [insider_trade(db, "SMCO", buy=True, value=v, role="Director", name=n)
+             for n, v in (("A", 200_000), ("B", 200_000), ("C", 5_000))]  # C's $5K buy doesn't count
+    owners = [insider_trade(db, "XOM", buy=True, value=1_000_000, role=r, name=n)
+              for n, r in (("Fund", "10% Owner"), ("D", "Director"), ("E", "Director"))]  # 10% owners don't count
+    small = [insider_trade(db, "LMT", buy=True, value=50_000, role="Director", name=n) for n in "FGH"]  # $150K total
+    score_trades(db, token + owners + small, watchlist=set())
+    assert all("insiders buying" not in " ".join(t.public_tags) for t in token + owners + small)
 
 
 def test_sales_never_form_insider_clusters(db, seeded):

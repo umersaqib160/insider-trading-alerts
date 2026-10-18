@@ -4,7 +4,7 @@ import httpx
 import pytest
 
 from app.sec import (
-    EdgarClient, EdgarError, daily_index_path, filing_index_url, parse_daily_index, parse_form4, person_name,
+    DAILY_INDEX_MISSING, EdgarClient, EdgarError, daily_index_path, filing_index_url, parse_daily_index, parse_form4, person_name,
 )
 
 from .conftest import FIXTURES
@@ -139,6 +139,10 @@ def test_edgar_client_sends_user_agent_and_throttles():
 
 def test_edgar_client_404_is_none_and_errors_raise():
     assert _edgar(lambda r: httpx.Response(404)).get_text("/missing") is None
+    # SEC answers 403 for a holiday's daily index; only callers that expect that treat it as missing.
+    assert _edgar(lambda r: httpx.Response(403)).get_text("/holiday", missing=DAILY_INDEX_MISSING) is None
+    with pytest.raises(EdgarError, match="HTTP 403"):
+        _edgar(lambda r: httpx.Response(403)).get_text("/blocked")
     with pytest.raises(EdgarError, match="HTTP 503"):
         _edgar(lambda r: httpx.Response(503)).get_text("/busy")
 

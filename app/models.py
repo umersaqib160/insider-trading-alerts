@@ -79,6 +79,10 @@ class Company(Base):
     industry_checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     listed: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
     in_sp500: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+    # Size order from SEC's ticker file, which follows market value: 1 = largest listed company.
+    size_rank: Mapped[int | None] = mapped_column(Integer)
+    # The same order among S&P 500 members only (1-~503); None outside the index. Used by the notable score.
+    sp500_rank: Mapped[int | None] = mapped_column(Integer)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
 

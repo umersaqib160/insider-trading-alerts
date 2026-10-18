@@ -61,13 +61,20 @@ All weights are in [`scoring.py`](app/agents/scout/scoring.py).
 
 | Signal | Points |
 |---|---|
-| Size (insiders) | $100K+ 5 · $1M+ 15 · $5M+ 25 · $10M+ 35 |
+| Size (insiders) | 0: shown as a fact tag ($100K+, $1M+, $5M+, $10M+) but bigger buys didn't do better |
 | Size (Congress, bottom of range) | $15K+ 5 · $50K+ 15 · $250K+ 25 · $1M+ 35 |
-| Direction | Insider buy 20 · unplanned sale 5 · pre-planned sale 0 · Congress buy 10, sale 5 |
-| Who (insiders) | CEO/CFO/Chair 20 · other officer 10 · director 8 · 10% owner 5 |
+| Direction | Insider buy 30 · insider sale 0 (planned or not) · Congress buy 10, sale 5 |
+| Who (insiders) | Other officer 20 · director 20 · CEO/CFO/Chair 5 · 10% owner 0 |
+| S&P 500 (insider buys only) | Rank 1–200 by size: 25 · rank 201–500: 15 |
 | Who (Congress) | High-profile list 20 · committee chair or ranking member 10 |
 | Committee link | Member sits on a committee overseeing the company's industry: 15 |
-| Cluster | 3+ insiders buying the same company within 14 days: 25 · 2+ members trading the same stock within 14 days: 15 |
+| Cluster | 3+ officers or directors buying the same company within 14 days, each $10K+, $250K+ combined: 5 · 2+ members of Congress trading the same stock within 14 days: 15 |
+
+The insider weights come from a 13-quarter backtest against real price moves
+([`docs/backtest-2023-2026.md`](docs/backtest-2023-2026.md)). In practice, a
+notable insider trade is an officer or director buying an S&P 500 stock, or a
+CEO buying at a top-200 company; insider sales are never notable. The S&P size
+rank follows the order of SEC's ticker file, refreshed by the nightly job.
 
 The reasons behind each score are stored as tags. Factual ones ("CEO",
 "$5M+", "Sits on Armed Services") are shown to users on trades and in

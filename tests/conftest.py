@@ -101,13 +101,13 @@ def logged_in(client) -> TestClient:
 def seeded(db):
     db.add_all([
         Company(ticker="AAPL", name="Apple Inc.", sector="Information Technology", industry="Technology Hardware",
-                cik="0000320193", exchange="Nasdaq", in_sp500=True),
+                cik="0000320193", exchange="Nasdaq", in_sp500=True, sp500_rank=2),
         Company(ticker="NVDA", name="Nvidia", sector="Information Technology", industry="Semiconductors",
-                cik="0001045810", exchange="Nasdaq", in_sp500=True),
+                cik="0001045810", exchange="Nasdaq", in_sp500=True, sp500_rank=1),
         Company(ticker="XOM", name="Exxon Mobil", sector="Energy", industry="Integrated Oil & Gas",
-                cik="0000034088", exchange="NYSE", in_sp500=True),
+                cik="0000034088", exchange="NYSE", in_sp500=True, sp500_rank=20),
         Company(ticker="LMT", name="Lockheed Martin", sector="Industrials", industry="Aerospace & Defense",
-                cik="0000936468", exchange="NYSE", in_sp500=True),
+                cik="0000936468", exchange="NYSE", in_sp500=True, sp500_rank=250),
         Company(ticker="SMCO", name="Small Co", sector="Industrials", industry="Machinery", cik="0000000777",
                 exchange="Nasdaq"),
         Company(ticker="GONE", name="Departed Co", sector="Energy", listed=False),

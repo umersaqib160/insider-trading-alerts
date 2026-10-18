@@ -155,6 +155,25 @@ def test_sync_sp500_flags_members_and_keeps_names(db):
     assert nvda.in_sp500 is False and nvda.industry_checked_at is None
 
 
+def test_size_ranks_follow_sec_order(db):
+    sync_listed(db, _listed())
+    ranks = dict(db.execute(select(Company.ticker, Company.size_rank)).all())
+    assert ranks == {"AAPL": 1, "BRK.B": 2, "GOOGL": 3, "NVDA": 4, "SCBO": 5}
+
+    sp500 = parse_constituents((FIXTURES / "constituents_sample.csv").read_text())
+    sync_sp500(db, sp500)
+    sp_ranks = dict(db.execute(select(Company.ticker, Company.sp500_rank)).all())
+    # Members ranked by size; XYZ isn't in SEC's file, so it goes last. Non-members have no S&P rank.
+    assert sp_ranks == {"AAPL": 1, "BRK.B": 2, "NVDA": 3, "XYZ": 4, "GOOGL": None, "SCBO": None}
+
+    sync_listed(db, [c for c in _listed() if c.ticker != "AAPL"])  # Apple drops out of SEC's file
+    sync_sp500(db, [r for r in sp500 if r.ticker != "BRK.B"])  # Berkshire leaves the index
+    sizes = dict(db.execute(select(Company.ticker, Company.size_rank)).all())
+    sp_ranks = dict(db.execute(select(Company.ticker, Company.sp500_rank)).all())
+    assert sizes["AAPL"] is None and sizes["BRK.B"] == 1
+    assert sp_ranks == {"AAPL": 2, "BRK.B": None, "NVDA": 1, "XYZ": 3, "GOOGL": None, "SCBO": None}
+
+
 def test_sync_politicians_retires_and_restores_members(db):
     people = _legislators()
     assert sync_politicians(db, people).added == 4

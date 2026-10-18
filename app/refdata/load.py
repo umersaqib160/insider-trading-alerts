@@ -56,7 +56,7 @@ def sync_listed(db: Session, records: list[ListedCompany]) -> SyncResult:
     by_cik = {c.cik: c for c in existing if c.cik}
     by_ticker = {c.ticker: c for c in existing}
     seen: set[int] = set()
-    for r in records:
+    for rank, r in enumerate(records, 1):
         company = by_cik.get(r.cik) or by_ticker.get(r.ticker)
         if company is None:
             company = Company(ticker=r.ticker, cik=r.cik, name=r.name, exchange=r.exchange,
@@ -74,12 +74,15 @@ def sync_listed(db: Session, records: list[ListedCompany]) -> SyncResult:
                 values["ticker"] = r.ticker
             if _apply(company, values):
                 result.updated += 1
+        company.size_rank = rank  # SEC's file is ordered by market value; shifts nightly, so not counted as an update
         seen.add(id(company))
 
     for company in existing:
         if id(company) not in seen and company.listed:
             company.listed = False
             result.removed += 1
+        if id(company) not in seen:
+            company.size_rank = None
     db.commit()
     return result
 
@@ -106,8 +109,20 @@ def sync_sp500(db: Session, records: list[CompanyRecord]) -> SyncResult:
             company.in_sp500 = False
             company.industry_checked_at = None  # re-derive sector and industry from its SIC code
             result.removed += 1
+    rank_sp500(db)
     db.commit()
     return result
+
+
+def rank_sp500(db: Session) -> None:
+    """Number S&P 500 members by size (1 = largest). Members missing from SEC's file go last."""
+    db.flush()
+    members = db.scalars(select(Company).where(Company.in_sp500.is_(True))).all()
+    members.sort(key=lambda c: (c.size_rank is None, c.size_rank or 0, c.id))
+    for rank, company in enumerate(members, 1):
+        company.sp500_rank = rank
+    for company in db.scalars(select(Company).where(Company.in_sp500.is_(False), Company.sp500_rank.is_not(None))):
+        company.sp500_rank = None
 
 
 def sync_politicians(db: Session, records: list[PoliticianRecord]) -> SyncResult:

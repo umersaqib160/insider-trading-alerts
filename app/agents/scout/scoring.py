@@ -7,7 +7,10 @@ marketing agents talk about. Users always get alerts for what they star,
 whatever the score.
 
 All weights live in this file so they're easy to tune after the weekly
-top-10 review.
+top-10 review. The insider weights come from a 13-quarter backtest against
+real price moves (docs/backtest-2023-2026.md): buys by officers and directors
+at S&P 500 companies did best; trade size, CEO titles, clusters and sells
+predicted little, so they score low or zero but still show as fact tags.
 """
 
 from dataclasses import dataclass
@@ -24,25 +27,33 @@ CLUSTER_WINDOW_DAYS = 14
 REVIEW_VALUE = 50_000_000
 REVIEW_APPROVED = "approved"
 
-INSIDER_SIZE = [(10_000_000, 35, "$10M+"), (5_000_000, 25, "$5M+"), (1_000_000, 15, "$1M+"), (100_000, 5, "$100K+")]
+# Size earns no points for insiders (bigger buys did slightly worse); the tag stays as a fact for users.
+INSIDER_SIZE = [(10_000_000, 0, "$10M+"), (5_000_000, 0, "$5M+"), (1_000_000, 0, "$1M+"), (100_000, 0, "$100K+")]
 # Congress reports ranges; we score on the bottom of the range.
 CONGRESS_SIZE = [(1_000_000, 35, "$1M+"), (250_000, 25, "$250K+"), (50_000, 15, "$50K+"), (15_000, 5, "$15K+")]
 
-INSIDER_BUY = 20
-INSIDER_UNPLANNED_SALE = 5
+INSIDER_BUY = 30
+INSIDER_UNPLANNED_SALE = 0  # sells top out at 20 points, so they are never notable
 INSIDER_PLANNED_SALE = 0
 CONGRESS_BUY = 10
 CONGRESS_SALE = 5
 
-ROLE_TOP = 20  # CEO, CFO, chair
-ROLE_OFFICER = 10
-ROLE_DIRECTOR = 8
-ROLE_TEN_PERCENT = 5
+ROLE_TOP = 5  # CEO, CFO, chair
+ROLE_OFFICER = 20
+ROLE_DIRECTOR = 20
+ROLE_TEN_PERCENT = 0
+# Insider buys only (not sells, not Congress), by rank among S&P 500 members (1 = largest).
+SP500_TOP_RANK = 200
+SP500_TOP = 25
+SP500_OTHER = 15
 WATCHLIST_MEMBER = 20
 COMMITTEE_LEADER = 10
 COMMITTEE_LINK = 15
-INSIDER_CLUSTER = 25  # 3+ different insiders buying the same company
+# 3+ officers or directors (not 10% owners) buying the same company, each for $10K+, $250K+ combined.
+INSIDER_CLUSTER = 5
 INSIDER_CLUSTER_MIN = 3
+INSIDER_CLUSTER_EACH = 10_000
+INSIDER_CLUSTER_TOTAL = 250_000
 CONGRESS_CLUSTER = 15  # 2+ members trading the same stock
 CONGRESS_CLUSTER_MIN = 2
 
@@ -136,12 +147,31 @@ def committee_links(politician: Politician, sector: str, industry: str) -> list[
             if any(keyword in text for keyword in COMMITTEE_INDUSTRIES.get(c, ()))]
 
 
+def _officer_or_director(title: str) -> bool:
+    return any(p.strip() not in ("10% Owner", "") for p in title.split(","))
+
+
 def _insider_cluster(db: Session, trade: Trade) -> int:
+    """How many officers and directors bought this company within the window, if the cluster qualifies (else 0)."""
     window = timedelta(days=CLUSTER_WINDOW_DAYS)
-    return db.scalar(select(func.count(func.distinct(Trade.actor_name))).where(
+    buys = db.execute(select(Trade.actor_name, Trade.actor_role, Trade.value_low).where(
         Trade.source == SOURCE_FORM4, Trade.direction == BUY, Trade.company_id == trade.company_id,
         Trade.trade_date.between(trade.trade_date - window, trade.trade_date + window),
-    )) or 0
+        Trade.value_low >= INSIDER_CLUSTER_EACH,
+    )).all()
+    buys = [b for b in buys if _officer_or_director(b.actor_role)]
+    people = {b.actor_name for b in buys}
+    if len(people) < INSIDER_CLUSTER_MIN or sum(b.value_low for b in buys) < INSIDER_CLUSTER_TOTAL:
+        return 0
+    return len(people)
+
+
+def _sp500_tag(trade: Trade) -> dict | None:
+    company = trade.company
+    if not company or not company.in_sp500:
+        return None
+    rank = company.sp500_rank
+    return _tag("S&P 500", SP500_TOP if rank and rank <= SP500_TOP_RANK else SP500_OTHER)
 
 
 def _congress_cluster(db: Session, trade: Trade) -> int:
@@ -178,9 +208,11 @@ def score_trade(db: Session, trade: Trade, watchlist: set[str]) -> Score:
             tags.append(_tag("Unplanned sale", INSIDER_UNPLANNED_SALE))
         if role := _role_tag(trade.actor_role):
             tags.append(role)
+        if trade.is_buy and (sp500 := _sp500_tag(trade)):
+            tags.append(sp500)
         if trade.is_buy and trade.company_id:
             buyers = _insider_cluster(db, trade)
-            if buyers >= INSIDER_CLUSTER_MIN:
+            if buyers:
                 tags.append(_tag(f"{buyers} insiders buying within {CLUSTER_WINDOW_DAYS} days", INSIDER_CLUSTER))
     else:
         if size := _size_tag(trade.value_low, CONGRESS_SIZE):

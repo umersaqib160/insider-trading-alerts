@@ -79,6 +79,29 @@ Two warnings for X. An earlier Pelosi tracker account was permanently suspended 
 
 Timely angle: Nancy Pelosi has retired, so there is room for a new "who is the next Pelosi" story. Rank the top-trading members every month and make that a recurring post.
 
+### What the X account posts (decided Oct 2026, after the scoring backtest)
+
+The backtest (`docs/backtest-2023-2026.md`) found about 9 notable insider trades a week, too few on their own
+for an account that needs to post several times a day. Three kinds of post fill the feed, all **buys only**
+(sells predicted nothing, and a stream of "CEO sold" posts reads as noise):
+
+1. **Notable trades:** the scored list (officers and directors buying S&P 500 stocks, CEOs at the top 200).
+   The only posts allowed words like "notable" or "signal".
+2. **Newsworthy buys:** facts that get attention whatever their score: insider buys of $1M+ by officers or
+   directors, clusters of insiders buying together, and Congress purchases once the Quiver feed is live.
+   These posts state the filing and nothing more. At most one post per stock per day.
+3. **Fact-checked follow-ups:** "NVDA is up 30% since Nancy Pelosi's purchase, which we sent to our group on
+   12 March." Built from our own sent-alert record, never from memory:
+   - Measure from the **day we sent the alert** (what a member could have acted on). For Congress, also show the
+     trade date, since members disclose up to 45 days late; never imply members bought at the trade-date price.
+   - Use split- and dividend-adjusted closing prices, and show both dates in the post.
+   - Losers exist too. To keep winner posts honest, publish a **track record page** listing every notable alert
+     and its result, and link it from each follow-up. "Past results don't predict future results" goes on every one.
+   - Needs: a daily price source for the app (to choose before building the Content Agent) and the alert log the
+     Telegram sender already keeps.
+
+Roundups reuse the same data: a daily "biggest insider buys today" thread and the weekly top 10.
+
 ## Pricing and launch offer
 
 Two plans, priced between the free trackers and Unusual Whales: Free, and Pro at $15 per month.

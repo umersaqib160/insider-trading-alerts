@@ -8,8 +8,8 @@ from sqlalchemy.orm import Session
 
 from ...models import BUY, SELL, SOURCE_FORM4, Company, InsiderTradeDetail, ProcessedFiling, Trade
 from ...sec import (
-    EdgarClient, EdgarError, current_feed_path, daily_index_path, filing_index_url, parse_current_feed, parse_daily_index,
-    parse_form4,
+    DAILY_INDEX_MISSING, EdgarClient, EdgarError, current_feed_path, daily_index_path, filing_index_url,
+    parse_current_feed, parse_daily_index, parse_form4,
 )
 
 FEED_PAGE_SIZE = 100
@@ -148,7 +148,7 @@ def reconcile_days(db: Session, edgar: EdgarClient, companies: dict[int, Company
 
 def _reconcile_day(db: Session, edgar: EdgarClient, companies: dict[int, Company], day: date,
                    result: InsiderResult) -> None:
-    index = edgar.get_text(daily_index_path(day))
+    index = edgar.get_text(daily_index_path(day), missing=DAILY_INDEX_MISSING)
     if index is None:
         result.unpublished_days.append(day)  # holiday, or not out yet
         return

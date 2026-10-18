@@ -56,7 +56,7 @@ class FakeEdgar:
         self.fail_on = fail_on
         self.requested: list[str] = []
 
-    def get_text(self, path: str) -> str | None:
+    def get_text(self, path: str, missing: tuple[int, ...] = (404,)) -> str | None:
         self.requested.append(path)
         if self.fail_on and self.fail_on in path:
             raise EdgarError("SEC EDGAR returned HTTP 503")

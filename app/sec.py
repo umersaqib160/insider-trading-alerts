@@ -106,6 +106,10 @@ def parse_current_feed(xml: str) -> list[FeedEntry]:
     return entries
 
 
+# SEC answers 403, not 404, for a daily index that doesn't exist (a holiday, or not out yet).
+DAILY_INDEX_MISSING = (403, 404)
+
+
 def daily_index_path(day: date) -> str:
     quarter = (day.month - 1) // 3 + 1
     return f"/Archives/edgar/daily-index/{day.year}/QTR{quarter}/form.{day:%Y%m%d}.idx"
@@ -137,8 +141,8 @@ class EdgarClient:
             self._sleep(wait)
         self._last_request = self._clock()
 
-    def get_text(self, path: str) -> str | None:
-        """Fetch a sec.gov path or full SEC URL. Returns None for 404 (e.g. no index on a holiday)."""
+    def get_text(self, path: str, missing: tuple[int, ...] = (404,)) -> str | None:
+        """Fetch a sec.gov path or full SEC URL. Returns None for the `missing` statuses (404 by default)."""
         url = path if path.startswith("https://") else EDGAR_BASE + path
         for attempt, backoff in enumerate((*RETRY_BACKOFF, None)):
             self._throttle()
@@ -151,7 +155,7 @@ class EdgarClient:
                 retry_after = response.headers.get("Retry-After", "")
                 self._sleep(min(float(retry_after), MAX_RETRY_WAIT) if retry_after.isdigit() else backoff)
                 continue
-            if response.status_code == 404:
+            if response.status_code in missing:
                 return None
             if response.status_code != 200:
                 raise EdgarError(f"SEC EDGAR returned HTTP {response.status_code} for {path}")
