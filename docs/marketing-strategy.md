@@ -20,7 +20,18 @@ Three things in the current plan will cause problems if they are not sorted out 
 
 **2. Congress trades are old news by the time they are public.** Members of Congress can take up to 45 days to report a trade. Company insiders must file Form 4 within 2 business days ([SEC filing example](https://www.sec.gov/Archives/edgar/data/1811972/000181197225000007/ex191insidertradingpolicy.htm)). So sell speed on filings ("you know within minutes of the filing"), never speed on the trade itself. Company insider alerts are the fresher, more useful half of the product.
 
-**3. Pick a payment provider that accepts this product.** A merchant of record (Paddle, Lemon Squeezy, Polar) handles US sales tax and EU VAT for you, which matters when you sell from Belgium to the US. Paddle does not accept products that are mainly "community access" ([Paddle AUP](https://paddle.com/support/aup)). So sell Behind the Curtain as software (web app + alerts) with the community as a bonus. Ask the provider to approve the product before you build checkout. The word "insider trading" in public copy may slow that approval, so have a plain description ready ("alerts on public SEC and Congress trade filings").
+**3. Pick a payment provider that accepts this product.** *(Updated Oct 2026 after checking the policies.)*
+Paddle's acceptable use policy bans "investment or financial advice, including trading signals and strategies"
+([Paddle AUP](https://paddle.com/support/aup)), and Polar bans "trading signals, or investment strategies"
+([Polar acceptable use](https://polar.sh/docs/merchant-of-record/acceptable-use)). Lemon Squeezy's list doesn't
+name trading ([Lemon Squeezy prohibited products](https://docs.lemonsqueezy.com/help/getting-started/prohibited-products)),
+but it is moving its sellers to Stripe Managed Payments, Stripe's own merchant of record, available in Checkout
+since April 2026 ([Stripe changelog](https://docs.stripe.com/changelog/dahlia/2026-04-22/managed-payments.md)).
+Recommended order: (1) Stripe Managed Payments, (2) plain Stripe with Stripe Tax if Managed Payments says no
+(you then register for EU VAT yourself; US sales tax only matters past each state's sales threshold), (3) Lemon
+Squeezy as a backup. Whatever the provider, describe the product as software: "real-time alerts on public SEC and
+Congress trade filings, for a watchlist you choose". Never call it signals, tips or advice, in the application or
+on the site. Get written approval before building checkout.
 
 ## Target customer and positioning
 
@@ -86,7 +97,8 @@ for an account that needs to post several times a day. Three kinds of post fill 
 (sells predicted nothing, and a stream of "CEO sold" posts reads as noise):
 
 1. **Notable trades:** the scored list (officers and directors buying S&P 500 stocks, CEOs at the top 200).
-   The only posts allowed words like "notable" or "signal".
+   The only posts allowed to call a trade "notable". Never "signal", "tip" or "pick" (payment providers ban
+   trading signals, and it reads as advice).
 2. **Newsworthy buys:** facts that get attention whatever their score: insider buys of $1M+ by officers or
    directors, clusters of insiders buying together, and Congress purchases once the Quiver feed is live.
    These posts state the filing and nothing more. At most one post per stock per day.

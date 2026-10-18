@@ -62,6 +62,11 @@ Strategy step 2, the Onboarding Agent (see Open items), once the payment provide
   on investment recommendations.
 - **Next strategy step:** step 2, the Onboarding Agent (merchant-of-record checkout and webhooks, Pro on/off,
   Skool invite). The payment provider needs to approve the product first.
+- **Payment provider (checked Oct 2026):** Paddle and Polar ban "trading signals"; try Stripe Managed Payments
+  first, then plain Stripe + Stripe Tax, then Lemon Squeezy. Details in `docs/marketing-strategy.md`, "Fix before
+  launch" #3. Never call the product "signals" in copy.
+- **Later feature (owner idea):** backtest the alerts themselves (how notable trades did afterwards), e.g. by
+  importing a year of SEC history. Not now.
 - **Before the Content Agent:** pick a daily price source for fact-checked follow-up posts and the track record page.
 
 ## Gotchas
