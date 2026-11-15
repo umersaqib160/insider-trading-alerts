@@ -14,6 +14,7 @@ from .config import get_settings
 from .db import get_sessionmaker
 from .formatting import market_today, short_date
 from .models import Politician, Trade, User
+from .monitoring import JOB_NIGHTLY, JOB_SCOUT, missed_filings_warning, report_run, stale_job_warning
 from .refdata.load import ReferenceDataError, fill_industries, load_reference_data
 from .sec import EdgarClient, EdgarError
 from .telegram import TelegramClient
@@ -60,19 +61,34 @@ def _print_report(report) -> int:
     return 1 if report.errors else 0
 
 
-def cmd_scout(args: argparse.Namespace) -> int:
+def _run_job(job: str, watches: str, run, tell_owner: bool) -> int:
+    """Run a scheduled job, then record how it went and warn the owner about problems (see monitoring.py)."""
+    owner = get_settings().owner_telegram_id
     with _session() as db:
-        report = run_scout(db, _edgar(), _quiver(), _telegram(), market_today(), send_alerts=not args.no_alerts)
+        try:
+            report = run(db)
+        except Exception as exc:
+            db.rollback()
+            if tell_owner:
+                report_run(db, _telegram(), owner, job, [f"It crashed: {type(exc).__name__}: {exc}"])
+            raise
+        if tell_owner:
+            warnings = [stale_job_warning(db, watches), missed_filings_warning(report.caught_up_filings)]
+            report_run(db, _telegram(), owner, job, report.errors, [w for w in warnings if w])
     return _print_report(report)
+
+
+def cmd_scout(args: argparse.Namespace) -> int:
+    return _run_job(JOB_SCOUT, JOB_NIGHTLY, lambda db: run_scout(
+        db, _edgar(), _quiver(), _telegram(), market_today(), send_alerts=not args.no_alerts,
+    ), tell_owner=not args.no_alerts)
 
 
 def cmd_nightly(args: argparse.Namespace) -> int:
-    with _session() as db:
-        report = run_nightly(
-            db, _edgar(), _quiver(), _telegram(), market_today(),
-            send_alerts=not args.no_alerts, refresh_refdata=not args.skip_refdata, reconcile=args.days,
-        )
-    return _print_report(report)
+    return _run_job(JOB_NIGHTLY, JOB_SCOUT, lambda db: run_nightly(
+        db, _edgar(), _quiver(), _telegram(), market_today(),
+        send_alerts=not args.no_alerts, refresh_refdata=not args.skip_refdata, reconcile=args.days,
+    ), tell_owner=not args.no_alerts)
 
 
 def _trade_line(rank: int, t: Trade) -> list[str]:

@@ -147,6 +147,26 @@ def test_edgar_client_404_is_none_and_errors_raise():
         _edgar(lambda r: httpx.Response(503)).get_text("/busy")
 
 
+def test_edgar_client_retries_timeouts_twice_then_gives_up():
+    calls = []
+
+    def flaky(request: httpx.Request) -> httpx.Response:
+        calls.append(1)
+        if len(calls) < 3:
+            raise httpx.ReadTimeout("The read operation timed out")
+        return httpx.Response(200, text="ok")
+
+    clock = FakeClock()
+    assert _edgar(flaky, clock).get_text("/slow") == "ok"
+    assert [s for s in clock.slept if s >= 3] == [3.0, 10.0]
+
+    def dead(request: httpx.Request) -> httpx.Response:
+        raise httpx.ConnectError("no route")
+
+    with pytest.raises(EdgarError, match="Couldn't reach SEC EDGAR for /down"):
+        _edgar(dead).get_text("/down")
+
+
 def test_edgar_client_retries_when_throttled():
     responses = iter([httpx.Response(429, headers={"Retry-After": "5"}), httpx.Response(503), httpx.Response(200, text="ok")])
     clock = FakeClock()

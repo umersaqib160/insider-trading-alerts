@@ -16,6 +16,8 @@ MIN_REQUEST_INTERVAL = 0.2
 RETRY_STATUSES = {429, 503}
 RETRY_BACKOFF = (10.0, 30.0, 60.0)
 MAX_RETRY_WAIT = 120.0
+# A timeout or dropped connection is usually a passing slowdown: wait briefly and try again before giving up.
+TRANSPORT_RETRY_WAITS = (3.0, 10.0)
 
 _INDEX_LINE = re.compile(
     r"^(?P<form>\S+(?: \S+)*?)\s{2,}(?P<company>.+?)\s+(?P<cik>\d+)\s+(?P<filed>\d{8})\s+(?P<path>edgar/\S+\.txt)\s*$"
@@ -144,14 +146,21 @@ class EdgarClient:
     def get_text(self, path: str, missing: tuple[int, ...] = (404,)) -> str | None:
         """Fetch a sec.gov path or full SEC URL. Returns None for the `missing` statuses (404 by default)."""
         url = path if path.startswith("https://") else EDGAR_BASE + path
-        for attempt, backoff in enumerate((*RETRY_BACKOFF, None)):
+        throttle_waits, transport_waits = list(RETRY_BACKOFF), list(TRANSPORT_RETRY_WAITS)
+        while True:
             self._throttle()
             try:
                 response = self._http.get(url, headers=self._headers)
+            except httpx.TransportError as exc:
+                if not transport_waits:
+                    raise EdgarError(f"Couldn't reach SEC EDGAR for {path}: {exc}") from exc
+                self._sleep(transport_waits.pop(0))
+                continue
             except httpx.HTTPError as exc:
                 raise EdgarError(f"Couldn't reach SEC EDGAR for {path}: {exc}") from exc
-            if response.status_code in RETRY_STATUSES and backoff is not None:
+            if response.status_code in RETRY_STATUSES and throttle_waits:
                 # SEC throttles bursts with 429; wait as asked (or back off) and try again.
+                backoff = throttle_waits.pop(0)
                 retry_after = response.headers.get("Retry-After", "")
                 self._sleep(min(float(retry_after), MAX_RETRY_WAIT) if retry_after.isdigit() else backoff)
                 continue
@@ -160,7 +169,6 @@ class EdgarClient:
             if response.status_code != 200:
                 raise EdgarError(f"SEC EDGAR returned HTTP {response.status_code} for {path}")
             return response.text
-        raise AssertionError("unreachable")
 
     def get_json(self, path: str) -> dict | None:
         text = self.get_text(path)

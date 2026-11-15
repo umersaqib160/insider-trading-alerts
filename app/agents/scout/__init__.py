@@ -30,6 +30,7 @@ class ScoutReport:
     lines_: list[str] = field(default_factory=list)
     new_trades: list[Trade] = field(default_factory=list)
     alerts_created: int = 0
+    caught_up_filings: int = 0  # nightly only: filings the 10-minute job had not read
     dispatch: DispatchResult = field(default_factory=DispatchResult)
     errors: list[str] = field(default_factory=list)
 
@@ -129,6 +130,7 @@ def run_nightly(
     report.note(f"insiders: {insiders.filings} filings caught up, {len(insiders.trades)} buys/sells"
                 + (f" (no index yet for {missing})" if missing else ""))
     report.new_trades.extend(insiders.trades)
+    report.caught_up_filings = insiders.filings
     if insiders.error:
         report.errors.append(insiders.error)
     _congress(db, quiver, by_ticker, report)

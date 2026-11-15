@@ -271,6 +271,21 @@ class ProcessedFiling(Base):
     processed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
+class JobStatus(Base):
+    """Health of a scheduled job (scout, nightly), for the owner warnings in monitoring.py."""
+
+    __tablename__ = "job_status"
+
+    name: Mapped[str] = mapped_column(String(16), primary_key=True)
+    last_run_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_ok_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_problem: Mapped[str | None] = mapped_column(String(1000))
+    problem_runs: Mapped[int] = mapped_column(Integer, default=0)  # bad runs in a row
+    last_notified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # True from the moment the owner was warned until they were told it is fixed.
+    alerting: Mapped[bool] = mapped_column(Boolean, default=False)
+
+
 class Alert(Base):
     __tablename__ = "alerts"
     __table_args__ = (UniqueConstraint("user_id", "trade_id", name="uq_alerts_user_trade"),)

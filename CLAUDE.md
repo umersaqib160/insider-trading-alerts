@@ -60,7 +60,8 @@ copy rules, and a new build order (content before payments). Three findings to r
   after launch.
 
 ## ▶ NEXT TASK
-Build order step 2 in the strategy doc: Free-plan limits, owner warnings when a job fails, terms and privacy pages.
+Build order step 2 in the strategy doc: Free-plan limits, then terms and privacy pages (owner warnings are done:
+`app/monitoring.py`, `OWNER_TELEGRAM_ID`; tune `MISSED_FILINGS_WARNING` after the first week in production).
 Then the Content Agent (needs an Anthropic API key from the owner). The Onboarding Agent waits for payment approval.
 
 ## Open items
@@ -82,6 +83,7 @@ Then the Content Agent (needs an Anthropic API key from the owner). The Onboardi
 ## Gotchas
 - SEC answers **403** (not 404) for a daily index that doesn't exist, e.g. on a US holiday. Only the daily-index
   fetch treats 403 as missing; everywhere else 403 is an error (usually a bad `SEC_USER_AGENT`).
+- SEC sometimes answers very slowly; the client retries a timeout twice (3s, 10s) before failing the run.
 - SEC throttles bursts (HTTP 429). The client paces requests to about 5 per second and retries; a full-week backfill takes about 15 minutes.
 - Funds and their partners co-file identical Form 4s. These are deduplicated by company, date, shares and price.
 - `load-industries` makes one SEC request per company (about 15 minutes for all of them); the nightly job does 1,000 per run.

@@ -52,6 +52,14 @@ Code lives in [`app/agents/scout/`](app/agents/scout/).
    sends retry up to 3 times; trades filed more than 7 days ago are stored
    but not alerted.
 
+**Owner warnings** ([`app/monitoring.py`](app/monitoring.py)): each run of
+`scout` and `nightly` is recorded in `job_status`. If `OWNER_TELEGRAM_ID` is
+set, you get a Telegram message when the 10-minute job fails twice in a row,
+when the nightly job fails, when either job stops running (they watch each
+other), or when the nightly catch-up finds 25+ filings the live feed missed.
+Reminders repeat every 6 hours while the problem lasts, and one message says
+when it's fixed. Runs with `--no-alerts` (backfills) don't count.
+
 **Pro alert options** (Settings page; only applied while the user is Pro):
 - *Skip pre-planned sales:* no alerts for 10b5-1 plan sales on starred
   companies (these are most of the alerts for big tech).
@@ -140,7 +148,9 @@ Run the tests with `.venv/bin/pytest`.
    - `TELEGRAM_BOT_TOKEN` and `TELEGRAM_BOT_USERNAME` (without the `@`)
    - `SEC_USER_AGENT`, e.g. `Behind The Curtain you@example.com` (SEC
      requires a real contact email)
-   - `QUIVER_API_KEY`
+   - `QUIVER_API_KEY` (optional: without it the Scout skips Congress)
+   - `OWNER_TELEGRAM_ID`: your own Telegram user id (message @userinfobot
+     to find it), so the scheduled jobs can warn you when something breaks
 3. Deploy. The `Procfile` runs migrations, then starts the app. `/healthz`
    is the health check.
 4. Generate a public domain. In @BotFather, send `/setdomain`, pick the bot,
@@ -213,8 +223,8 @@ approval can take weeks):
 - [x] **1. Filing Scout:** SEC Form 4 + Congress reader, backtested notable
       score, review hold, alerts for starred companies and politicians,
       Pro alert options.
-- [ ] **2. Before public sign-ups:** Free-plan limits, a warning to the
-      owner when a scheduled job fails, terms and privacy pages.
+- [ ] **2. Before public sign-ups:** Free-plan limits; terms and privacy
+      pages. (Done: a warning to the owner when a scheduled job fails.)
 - [ ] **3. Content Agent:** X and Reddit drafts from notable and newsworthy
       buys, via the Claude API, waiting for approval.
 - [ ] **4. Approval step:** Approve/Skip buttons in a private Telegram chat.

@@ -19,6 +19,8 @@ class Settings(BaseSettings):
     # SEC requires a descriptive User-Agent with contact details, e.g. "Behind The Curtain you@example.com".
     sec_user_agent: str = ""
     quiver_api_key: str = ""
+    # The owner's Telegram user id. Scheduled jobs message it when something breaks. Empty: no warnings.
+    owner_telegram_id: int | None = None
 
     @property
     def is_production(self) -> bool:

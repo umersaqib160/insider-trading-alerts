@@ -278,7 +278,7 @@ app/prompts/    copy rules, post templates, the 3 angles
 Build order (changed Nov 2026: payment approval can take weeks, so content comes before payments):
 
 1. **Filing Scout: done.** Form 4 filings and the Congress reader go into one `trades` table with the notable score. Tested on real weeks of filings; the top 10 was checked by hand.
-2. **Before any public sign-up:** the Free-plan limits (3 names, alerts 24 hours late), a message to you when a scheduled job fails, and terms and privacy pages.
+2. **Before any public sign-up:** the Free-plan limits (3 names, alerts 24 hours late) and terms and privacy pages. The message to you when a scheduled job fails is built.
 3. **Content Agent.** Store the copy rules and the three angles in `app/prompts/`. Output goes to a `drafts` table with status "waiting for approval", never straight to X. Test: generate 20 drafts from real filings and read them all.
 4. **Approval step.** A simple Telegram message to you with each draft and two buttons: Approve / Skip. This is your control lever for Phases 1 and 2.
 5. **Poster Agent.** Publishes approved drafts through the X API with a daily cap and spacing (for example, no more than one post per 90 minutes). Set a spending limit in the X developer console.
@@ -328,4 +328,4 @@ In the US, the Supreme Court held in *Lowe v. SEC* that publications giving impe
 - [ ] Data licences in writing: Quiver (commercial use, alerts to paying users, posts on X) and the price-data vendor (showing "% change since" figures publicly).
 - [ ] Lawyer: commercial use of congressional reports (the Ethics in Government Act restricts some uses), and whether EU or Belgian rules on investment recommendations cover the posts.
 - [ ] No return claims in marketing until a lawyer approves the wording; winner posts always link the full track record.
-- [ ] A warning to you when the Scout stops working, so alerts never fail silently.
+- [x] A warning to you on Telegram when the Scout fails or stops, so alerts never fail silently (set `OWNER_TELEGRAM_ID`).
