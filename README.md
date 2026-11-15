@@ -9,19 +9,25 @@ from House and Senate periodic transaction reports, via the Quiver API.
 > The app reports what was filed, to everyone the same way, and never tells
 > anyone to buy or sell. Every alert carries a "not investment advice" line.
 
-The marketing and automation plan lives in the strategy document
-("Behind the Curtain — Marketing & Automation Strategy"). It's being built
+The marketing and automation plan lives in
+[`docs/marketing-strategy.md`](docs/marketing-strategy.md). It's being built
 one step at a time; see [Roadmap](#roadmap).
 
 ## Status
 
 **Built:** Telegram login and test notifications; watchlists over every US
-company on Nasdaq, NYSE and Cboe (about 6,100) and all of Congress; and the
+company on Nasdaq, NYSE and Cboe (about 6,100) and all of Congress; the
 **Filing Scout** (strategy step 1), which checks for new trades every 10
-minutes, scores them, and alerts watchers.
+minutes, scores them with a backtested notable score, and alerts watchers;
+and two Pro alert options.
 
-**Waiting on you:** a Quiver API key (Congress trades), the Telegram bot
-token, and a Railway account to deploy.
+**Not built yet:** the Free-plan limits (3 names, alerts 24 hours late),
+payments, and the other marketing agents. Congress trades are written but
+untested until there is a data licence.
+
+**Waiting on you:** the Telegram bot token, a Railway account to deploy, and
+a decision on Congress data (Quiver's commercial plan is $125–250 a month;
+see the strategy document, "Fix before launch" #4).
 
 ## Filing Scout
 
@@ -202,17 +208,21 @@ Python · FastAPI + Jinja + HTMX · SQLAlchemy + Alembic · Postgres on Railway
 Product foundations (done): Telegram login, watchlists, company pages,
 alert history, light and dark themes.
 
-Strategy build order:
-- [x] **1. Filing Scout:** SEC Form 4 + Quiver Congress trades, notable
-      score, review hold, alerts for starred companies and politicians.
-- [ ] **2. Onboarding Agent:** merchant-of-record checkout and webhooks;
-      Pro on/off; Skool invite.
-- [ ] **3. Content Agent:** X and Reddit drafts from notable trades, via the
-      Claude API, waiting for approval.
+Strategy build order (content now comes before payments, because payment
+approval can take weeks):
+- [x] **1. Filing Scout:** SEC Form 4 + Congress reader, backtested notable
+      score, review hold, alerts for starred companies and politicians,
+      Pro alert options.
+- [ ] **2. Before public sign-ups:** Free-plan limits, a warning to the
+      owner when a scheduled job fails, terms and privacy pages.
+- [ ] **3. Content Agent:** X and Reddit drafts from notable and newsworthy
+      buys, via the Claude API, waiting for approval.
 - [ ] **4. Approval step:** Approve/Skip buttons in a private Telegram chat.
 - [ ] **5. Poster Agent:** publishes approved drafts to X with a daily cap.
-- [ ] **6. Teaser and Digest Agents:** free Telegram channel, weekly email.
-- [ ] **7. Analytics Agent:** weekly numbers report.
+- [ ] **6. Onboarding Agent:** checkout and webhooks (Stripe Managed
+      Payments first); Pro on/off; Skool invite.
+- [ ] **7. Teaser and Digest Agents:** free Telegram channel, weekly email.
+- [ ] **8. Analytics Agent:** weekly numbers report.
 
 Shelved: Reddit/StockTwits rumor signals (they don't fit "report what was
 filed").

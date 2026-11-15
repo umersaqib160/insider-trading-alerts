@@ -23,7 +23,7 @@ Read this first, then `README.md` (architecture, commands, deploy) and
 - Hold for review: trades over $50M or with odd values; release with `python -m app.cli approve <id>`.
 - Shelved: Reddit/StockTwits rumor signals.
 
-## Status (as of Oct 8, 2026)
+## Status (as of Nov 15, 2026)
 - Done: the product foundation, plus **strategy step 1, the Filing Scout**, which was tested on a real week of SEC data, and the backtested notable score (below).
 - Review page of last week's top 10: https://claude.ai/artifact/QJQUsi7rUM7DDFXuHTkcMQ
 
@@ -48,26 +48,36 @@ options in Settings: **skip pre-planned sales** and **notable trades from every 
 Company pages show "In the last 12 months: N insider trades (x buys, y sells)", or "since tracking began" until
 there's a year of history.
 
+## Strategy review (Nov 15, 2026)
+`docs/marketing-strategy.md` was brought up to date: a "Where we are" table, five fix-before-launch items, costs,
+copy rules, and a new build order (content before payments). Three findings to remember:
+- **Quiver's $30 and $75 API plans are non-commercial.** Commercial use needs the Startup plan ($125/month in year
+  one, then $250). Recommended: launch with insiders only and add Congress when ~20 Pro members cover it. Owner
+  hasn't decided yet.
+- **The Free plan (3 names, alerts 24 hours late) is in the pricing table but not in the code.** Every user
+  currently gets unlimited instant alerts. Must be built before public sign-ups.
+- **Price data for "up 30% since" posts is a licensing question** (cheap plans forbid display). Not needed until
+  after launch.
+
 ## ▶ NEXT TASK
-Strategy step 2, the Onboarding Agent (see Open items), once the payment provider approves the product.
+Build order step 2 in the strategy doc: Free-plan limits, owner warnings when a job fails, terms and privacy pages.
+Then the Content Agent (needs an Anthropic API key from the owner). The Onboarding Agent waits for payment approval.
 
 ## Open items
-- **Waiting on owner:** a Quiver API key (also check the plan allows commercial use and public display), the
-  Telegram bot token and username, and a Railway account.
+- **Waiting on owner:** the Telegram bot token and username, a Railway account, a decision on Congress data (see
+  the strategy review above), business registration + payment-provider approval, and an Anthropic API key.
 - `SEC_USER_AGENT` is `Behind The Curtain umersaqib160@hotmail.com` (set it as a Railway variable too).
 - Checked Oct 18, 2026: the full Scout (migrations 0001–0004, refdata, backfill) runs on Postgres 16, not just SQLite.
 - **Unverified until the Quiver key arrives:** Quiver field names and auth header (`Authorization: Token <key>`)
   in `app/agents/scout/congress.py`. Check them against a real response.
 - **Legal (for a lawyer):** commercial use of congressional reports (Ethics in Government Act); EU/Belgium rules
   on investment recommendations.
-- **Next strategy step:** step 2, the Onboarding Agent (merchant-of-record checkout and webhooks, Pro on/off,
-  Skool invite). The payment provider needs to approve the product first.
 - **Payment provider (checked Oct 2026):** Paddle and Polar ban "trading signals"; try Stripe Managed Payments
   first, then plain Stripe + Stripe Tax, then Lemon Squeezy. Details in `docs/marketing-strategy.md`, "Fix before
   launch" #3. Never call the product "signals" in copy.
 - **Later feature (owner idea):** backtest the alerts themselves (how notable trades did afterwards), e.g. by
   importing a year of SEC history. Not now.
-- **Before the Content Agent:** pick a daily price source for fact-checked follow-up posts and the track record page.
+- **After launch:** pick a daily price source for follow-up posts and the track record page; get display rights in writing.
 
 ## Gotchas
 - SEC answers **403** (not 404) for a daily index that doesn't exist, e.g. on a US holiday. Only the daily-index
